@@ -32,6 +32,11 @@ offline.rest{2} = run1(run.header.EVENT.POS(close) : run.header.EVENT.POS(finish
 % offline data
 valuesStart=[7691, 7701];
 valuesEnd=[7692, 7702];
+
+% Create logical index to select rows to keep
+rows_to_keep = setdiff(1:71, [13, 14, 18, 19, 65:71]);
+
+
 for i=1:3
     labels = zeros(20, 1);
     data = cell(20, 1);
@@ -50,7 +55,7 @@ for i=1:3
     
     for j=1:20
         % add samples
-        runs.eeg{i}{j} = run1(run1_trials(j,1):run1_trials(j,2));
+        runs.eeg{i}{j} = run1(run1_trials(j,1):run1_trials(j,2), rows_to_keep);
         % append task label
         if (floor(mod(r1_trialtype(j,1)/100, 10)) == 6)
             runs.labels{j} = 1; % 6-rest 7-reach
