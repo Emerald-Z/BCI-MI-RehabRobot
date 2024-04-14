@@ -75,17 +75,19 @@ valuesStart=[7691, 7701];
 valuesEnd=[7692, 7693, 7702, 7703];
 sustain=[102, 103, 202, 203];
 
-online = struct('eeg', {cell(3, 1)}, 'labels', struct('type', 'end', 'sustain'));
+online = struct('session2', struct('eeg', {cell(4, 1)}, 'labels', struct('type', {cell(4, 1)}, 'end', {cell(4, 1)}, 'sustain', {cell(4, 1)})) ...
+    , 'session3', struct('eeg', {cell(5, 1)}, 'labels', struct('type', {cell(5, 1)}, 'end', {cell(5, 1)}, 'sustain', {cell(5, 1)})));
 
-for i=1:3
+
+for i=1:4
     type = zeros(20, 1);
     ends = zeros(20, 1);
     sustain = zeros(20, 1);
-    data = cell{20, 1};
-    runs.labels{i} = labels;
-    runs.eeg{i} = data;
-    subject = load(strcat("Subject1/Online/Subject1_Online_s1r", num2str(i)));
-    run = subject.(strcat("Subject1_Online_s1r", num2str(i)));
+    data = cell(20, 1);
+    session2.labels{i} = labels;
+    session2.eeg{i} = data;
+    subject = load(strcat("Subject1/Online/Subject1_Online_s2r", num2str(i)));
+    run = subject.(strcat("Subject1_Online_s2r", num2str(i)));
     % filteredSignal = filtfilt(b, a, run.signal);
 
     run1= filtfilt(b, a, run.signal);%filtfilt(d,filtfilt(b, a, run.signal));
@@ -101,21 +103,21 @@ for i=1:3
     for j=1:20
         % append task label
         if (floor(r1_trialtype(j,1)/100) == 6)
-            runs.labels{j} = 1; % 6-rest 7-reach
+            session2.labels{j} = 1; % 6-rest 7-reach
         else
-            runs.labels{j} = 2;
+            session2.labels{j} = 2;
         end
-        runs.end{j} = floor(r1_trialtype(j)/1000);
+        session2.end{j} = floor(r1_trialtype(j)/1000);
 
         if (floor(r1_trialtype(j,1)/1000) == 2)
             % fail
-            runs.sustain{j} = 0;
+            session2.sustain{j} = 0;
             % add samples
-            subject1Tasks{j} = run1(run1_trials(j,1):run1_trials(j,2));
+            session2.eeg{i}{j} = run1(run1_trials(j,1):run1_trials(j,2), rows_to_keep);
         else
             % process sustain
-            runs.sustain{j} = floor(r1_sustaintype(sustain_idx)/100);
-            subject1Tasks{j} = run1(run1_trials(j,1): run1_sustain(sustain_idx));
+            session2.sustain{j} = floor(r1_sustaintype(sustain_idx)/100);
+            session2.eeg{i}{j} = run1(run1_trials(j,1) : run1_sustain(sustain_idx,2), rows_to_keep);
         end
 
         sustain_idx = sustain_idx + 1;
