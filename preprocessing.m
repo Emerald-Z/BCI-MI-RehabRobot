@@ -1,7 +1,8 @@
+%% epoching is done here too
 %% offline sesion
 % filtering - bpf
-fc1 = 50; % first cutoff frequency in Hz 
-fc2 = 150; % second cutoff frequency in Hz 
+fc1 = 0.1; % first cutoff frequency in Hz 
+fc2 = 45; % second cutoff frequency in Hz -> i got this from a paper
 fs = 512;
 % normalize the frequencies
 Wp = [fc1 fc2]*2/fs;
