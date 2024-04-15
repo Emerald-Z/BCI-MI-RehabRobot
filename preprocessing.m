@@ -77,7 +77,7 @@ valuesEnd=[7692, 7693, 7702, 7703];
 sustain=[102, 103, 202, 203];
 
 online = struct('session2', struct('eeg', {cell(4, 1)}, 'labels', struct('type', {cell(4, 1)}, 'end', {cell(4, 1)}, 'sustain', {cell(4, 1)})) ...
-    , 'session3', struct('eeg', {cell(5, 1)}, 'labels', struct('type', {cell(5, 1)}, 'end', {cell(5, 1)}, 'sustain', {cell(5, 1)})));
+    , 'session3', struct('eeg', {cell(6, 1)}, 'labels', struct('type', {cell(6, 1)}, 'end', {cell(6, 1)}, 'sustain', {cell(6, 1)})));
 
 
 for i=1:4
