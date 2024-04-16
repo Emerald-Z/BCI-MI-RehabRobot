@@ -37,7 +37,7 @@ valuesEnd=[7692, 7702];
 % Create logical index to select rows to keep
 rows_to_keep = setdiff(1:71, [13, 14, 18, 19, 65:71]);
 
-
+%runs (task data)
 for i=1:3
     labels = zeros(20, 1);
     data = cell(20, 1);
