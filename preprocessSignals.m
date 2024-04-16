@@ -1,12 +1,12 @@
 %% RUNS
 
 % Init vars
-subject = 1;
+subject = 2;
 session = 3;
 run = 6;    
 
 % Load data
-filename = sprintf('/Users/weavejul/Documents/Class_and_Lab/NeuEng_Spring_24/Project/project_git/Subject%d/Online/Subject_211_HarmMI_Online__feedback_U_s003_r006_2024_03_19_182442.gdf', subject);
+filename = sprintf('/Users/weavejul/Documents/Class_and_Lab/NeuEng_Spring_24/Project/git_project/Subject%d/Online/Subject_212_HarmMI_Online__feedback_U_s003_r006_2024_03_22_165209.gdf', subject);
 [signal, header] = sload(filename);
 
 % Store header and signal into new struct
@@ -22,11 +22,11 @@ eval(['save(new_filename, ''' variableName ''');']);
 %% REST
 
 % Init vars
-subject = 1;
+subject = 2;
 session = 3;
 
 % Load data
-filename = sprintf('/Users/weavejul/Documents/Class_and_Lab/NeuEng_Spring_24/Project/project_git/Subject%d/Online/Subject_211_HarmMI_Online__feedback_U_s003_r005_2024_03_19_181517.gdf', subject);
+filename = sprintf('/Users/weavejul/Documents/Class_and_Lab/NeuEng_Spring_24/Project/git_project/Subject%d/Online/Subject_212_HarmMI_OnlineCalib__s003_r000_2024_03_22_155916.gdf', subject);
 [signal, header] = sload(filename);
 
 % Store header and signal into new struct
