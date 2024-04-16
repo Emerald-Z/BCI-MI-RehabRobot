@@ -24,11 +24,11 @@ for i=1:3
         [coeff, score, latent, tsquared, explained] = pca(featureMatrix);
         
         % Plot the explained variance to see how many components to retain
-        figure;
-        plot(cumsum(explained), 'o-');
-        xlabel('Number of Principal Components');
-        ylabel('Cumulative Variance Explained (%)');
-        title('Explained Variance by PCA Components');
+        % figure;
+        % plot(cumsum(explained), 'o-');
+        % xlabel('Number of Principal Components');
+        % ylabel('Cumulative Variance Explained (%)');
+        % title('Explained Variance by PCA Components');
         
         % Choose components that explain, e.g., at least 95% of the variance
         cumVar = cumsum(explained);
