@@ -23,7 +23,7 @@ runs = struct('eeg', {cell(3, 1)}, 'labels', {cell(3, 1)});
 % rest data processing
 subject = load("Subject1/Offline/Subject1_Offline_s1Rest");
 run = subject.("Subject1_Offline_s1Rest");
-run1= filtfilt(b, a, run.signal);%filtfilt(d,filtfilt(b, a, run.signal));
+run1= filtfilt(b, a, run.signal); %filtfilt(d,filtfilt(b, a, run.signal));
 open = find(run.header.EVENT.TYP == 10);
 close = find(run.header.EVENT.TYP == 11);
 finish = find(run.header.EVENT.TYP == 55555);
