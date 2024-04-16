@@ -78,7 +78,7 @@ valuesSustain=[102, 103, 202, 203];
 
 online = struct('session2', struct('eeg', {cell(4, 1)}, 'labels', struct('type', {cell(4, 1)}, 'end', {cell(4, 1)}, 'sustain', {cell(4, 1)})) ...
     , 'session3', struct('rest', {cell(2, 1)}, 'eeg', {cell(6, 1)}, 'labels', struct('type', {cell(6, 1)}, 'end', {cell(6, 1)}, 'sustain', {cell(6, 1)})));
-
+session2.labels = struct('type', {cell(4, 1)}, 'end', {cell(4, 1)}, 'sustain', {cell(4, 1)});
 % Session 2 (first online)
 for i=1:4 % may have to manually change how many runs there were
     type = zeros(20, 1);

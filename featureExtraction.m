@@ -1,10 +1,12 @@
 %% call extract features
 %do for all signals being processed -- go trial by trial
 %runs.eeg{1}{j} <-- 1 = run #, j = sample number
+runs = Subject1.offline.runs;
+offline_feats = cell(3,1);
+
 for i=1:3
-    offline_feats = cell(3,1);
+    feats = cell(20, 1);
     for  j=1:20
-        feats = cell(20, 1);
         filteredSignal = runs.eeg{i}{j};
         window_size = 5;
         fs = 1;
@@ -34,7 +36,7 @@ for i=1:3
         cumVar = cumsum(explained);
         numComponents = find(cumVar >= 95, 1, 'first');
         model_input_feats = score(:, 1:numComponents);
-        disp(size(model_input_feats))
+        disp(size(model_input_feats));
         feats{j} = model_input_feats;
     end
     offline_feats{i} = feats;
