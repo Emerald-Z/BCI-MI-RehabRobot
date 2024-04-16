@@ -5,19 +5,20 @@ offline = Subject1.offline.runs;
 
 %% build classifier using offline data and test with run wise cross val -> independence
 % Linear - k - 1 fold, test on last run of subject data
+dataLen = 1794;
 k = 3; % num runs
 classificationErrors = zeros(k, 1);
 CM_fold_avg=0;
 CM_test_avg=0;
-FEATUREL=zeros(3, 36000);
+FEATUREL=zeros(3, 20 * dataLen);
 for i=1:3
     for j=1:20
-        FEATUREL(i, (j-1)*1800 : j*1800) = offline.labels{i} * ones(1800);
+        FEATUREL(i, (j-1)* dataLen + 1 : j* dataLen) = offline.labels{i, 1}(j,1) * ones(dataLen, 1);
     end
 end
 
 bestClassifiers=zeros(3,3); % the index of the classifier and its accuracy, test acc
-DATA = zeros(3, 36000, 4);
+DATA = zeros(3, 20 *dataLen, 4);
 for i=1:3
     DATA(i, :,:) = vertcat(offline_feats{i,1}{:});
 end
@@ -27,14 +28,19 @@ CM=zeros(2,2);
 MAV_ALL_acc=zeros(1, 5);
 for i=1:k
     % linear classifier
-    train = [DATA(1:i,:,:) DATA(i:k,:,:)];
-    train_labels= [FEATUREL(1:i,:) FEATUREL(i:k,:)];
-    test_labels = FEATUREL(i, :);
+    test = squeeze(DATA(i, :, :));
+
+    other_indices = setdiff(1:size(DATA, 1), i);
+    train = vertcat(DATA(other_indices, :, :));
+    train = reshape(train, [], 4);
+    train_labels = vertcat(FEATUREL(other_indices, :, :));
+    train_labels = reshape(train_labels', [], 1);
+    test_labels = squeeze(FEATUREL(i, :));
     % linear
-    [TstMAVVARFALL TstMAVVARErrALL] = classify(DATA(i,:,:)',train', train_labels);
+    [TstMAVVARFALL TstMAVVARErrALL] = classify(test,train, train_labels);
     [CC_avg(:,:,1,i) dum1 MAV_ALL_acc(i) dum2] = confusion(test_labels, TstMAVVARFALL);
     % TstAcc_MAVVAR_All_stor(i) = TstAcc_MAVVAR_ALL;
-    CM(:,:,1) = CM(:,:,1) + confusionmat(DATA(i,:,:)', TstMAVVARFALL');
+    CM(:,:,1) = CM(:,:,1) + confusionmat(test_labels, TstMAVVARFALL');
 end
 CM_fold_avg=sum(MAV_ALL_acc)/5;
 [maxValue, maxIndex] = max(MAV_ALL_acc);

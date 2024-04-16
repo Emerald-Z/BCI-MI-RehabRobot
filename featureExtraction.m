@@ -37,7 +37,7 @@ for i=1:3
         numComponents = find(cumVar >= 95, 1, 'first');
         model_input_feats = score(:, 1:numComponents);
         disp(size(model_input_feats));
-        feats{j} = model_input_feats;
+        feats{j} = model_input_feats(1:1794, 1:4);
     end
     offline_feats{i} = feats;
 end
@@ -78,5 +78,5 @@ for i=1:4
         disp(size(model_input_feats))
         feats{j} = model_input_feats;
     end
-    online_feats{i} = feats;
+    online_feats{i} = feats{1:4};
 end
