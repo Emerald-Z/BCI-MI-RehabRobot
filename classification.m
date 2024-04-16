@@ -2,10 +2,10 @@
 % in the guide we build classifier on offline data and test it on online
 % test linear, quad, SVM
 offline = Subject1.offline.runs;
-
+numFeatures = 7;
 %% build classifier using offline data and test with run wise cross val -> independence
 % Linear - k - 1 fold, test on last run of subject data
-dataLen = 1794;
+dataLen = 135;
 k = 3; % num runs
 classificationErrors = zeros(k, 1);
 CM_fold_avg=0;
@@ -18,9 +18,9 @@ for i=1:3
 end
 
 bestClassifiers=zeros(3,3); % the index of the classifier and its accuracy, test acc
-DATA = zeros(3, 20 *dataLen, 4);
+DATA = zeros(3, 20 *dataLen, numFeatures);
 for i=1:3
-    DATA(i, :,:) = vertcat(offline_feats{i,1}{:});
+    DATA(i, :,:) = offline_feats{i,1}; %vertcat(offline_feats{i,1}{:});
 end
 
 CC_avg=zeros(2,2,1,k); 
@@ -32,13 +32,14 @@ for i=1:k
 
     other_indices = setdiff(1:size(DATA, 1), i);
     train = vertcat(DATA(other_indices, :, :));
-    train = reshape(train, [], 4);
+    train = reshape(train, [], numFeatures);
     train_labels = vertcat(FEATUREL(other_indices, :, :));
     train_labels = reshape(train_labels', [], 1);
     test_labels = squeeze(FEATUREL(i, :));
     % linear
     [TstMAVVARFALL TstMAVVARErrALL] = classify(test,train, train_labels);
     [CC_avg(:,:,1,i) dum1 MAV_ALL_acc(i) dum2] = confusion(test_labels, TstMAVVARFALL);
+    disp(MAV_ALL_acc(i))
     % TstAcc_MAVVAR_All_stor(i) = TstAcc_MAVVAR_ALL;
     CM(:,:,1) = CM(:,:,1) + confusionmat(test_labels, TstMAVVARFALL');
 end
@@ -67,23 +68,25 @@ bestClassifiers(1, 2)=maxValue;
 cvAccuracy = zeros(k, 1); % Array to store cross-validation accuracy
 CMQ_fold_avg=0;
 CMQ_test_avg=0;
-classifiers1=cell(5,1);
-numFeatures = length(MAV_features_1{1,1});
+classifiers1=cell(k,1);
 
 % Perform cross-validation to optimize classifier
 for i = 1:k
     % Split data into training and validation sets for current fold
-    cvTrainIdx = remaining_indices;
-    cvTrainFeatures = [DATA(1:i,:,:) DATA(i:k,:,:)];
-    cvTrainLabels = [FEATUREL(1:i,:) FEATUREL(i:k,:)];
-    cvValidationFeatures = DATA(i, :,:);
-    cvValidationLabels = FEATUREL(i, :);
+    other_indices = setdiff(1:size(DATA, 1), i);
+
+    cvTrainFeatures = vertcat(DATA(other_indices, :, :));
+    cvTrainFeatures = reshape(train, [], numFeatures);
+    cvTrainLabels = vertcat(FEATUREL(other_indices, :, :));
+    cvTrainLabels = reshape(cvTrainLabels', [], 1);
+    cvValidationFeatures = squeeze(DATA(i, :, :));
+    cvValidationLabels = squeeze(FEATUREL(i, :));
     
     % Train quadratic LDA classifier
-    classifiers1{i} = fitcdiscr(cvTrainFeatures', cvTrainLabels, 'DiscrimType', 'quadratic');
+    classifiers1{i} = fitcdiscr(cvTrainFeatures, cvTrainLabels, 'DiscrimType', 'quadratic');
     
     % Predict on validation set
-    predictedLabels = predict(classifiers1{i}, cvValidationFeatures');
+    predictedLabels = predict(classifiers1{i}, cvValidationFeatures);
     
     % Compute accuracy for current fold
     cvAccuracy(i) = sum(predictedLabels == cvValidationLabels') / length(cvValidationLabels);
@@ -111,40 +114,43 @@ bestClassifiers(2, 2)=maxValue;
 % cc.Title=strcat('confusion matrix for MAV and VAR features for all 3 classes - Sensor ', sensor_labels{sensor});
 
 % SVM
+
+% svmModel = fitcecoc(trainingData, trainingLabels, 'Learners', t, 'Coding', 'onevsone');
+% Cross-validation
 cvAccuracy2 = zeros(k, 1); % Array to store cross-validation accuracy
 CMS_fold_avg=0;
 CMS_test_avg=0;
-classifiers2=cell(5,1);
+classifiers2=cell(k,1);
+t = templateLinear;
 
-svmModel = fitcecoc(trainingData, trainingLabels, 'Learners', t, 'Coding', 'onevsone');
-
-% Cross-validation
+% Perform cross-validation to optimize classifier
 for i = 1:k
     % Split data into training and validation sets for current fold
-    cvTrainIdx = remaining_indices;
-    cvTrainFeatures = [DATA(1:i,:,:) DATA(i:k,:,:)];
-    cvTrainLabels = [FEATUREL(1:i,:) FEATUREL(i:k,:)];
-    cvValidationFeatures = DATA(i, :,:);
-    cvValidationLabels = FEATUREL(i, :);
+    other_indices = setdiff(1:size(DATA, 1), i);
+
+    cvTrainFeatures = vertcat(DATA(other_indices, :, :));
+    cvTrainFeatures = reshape(train, [], numFeatures);
+    cvTrainLabels = vertcat(FEATUREL(other_indices, :, :));
+    cvTrainLabels = reshape(cvTrainLabels', [], 1);
+    cvValidationFeatures = squeeze(DATA(i, :, :));
+    cvValidationLabels = squeeze(FEATUREL(i, :));
     
     % Train quadratic LDA classifier
-    classifiers2{i} = fitcecoc(cvTrainFeatures', cvTrainLabels, 'Learners', t, 'Coding', 'onevsone');
+    classifiers2{i} = fitcecoc(cvTrainFeatures, cvTrainLabels, 'Learners', t, 'Coding', 'onevsone');
     
     % Predict on validation set
-    predictedLabels = predict(classifiers2{i}, cvValidationFeatures');
+    predictedLabels = predict(classifiers2{i}, cvValidationFeatures);
     
     % Compute accuracy for current fold
     cvAccuracy2(i) = sum(predictedLabels == cvValidationLabels') / length(cvValidationLabels);
 end
 
-fprintf('Linear model CV accuracy, subject 1: %f\n', 1-ldaCVError); 
-fprintf('SVM CV accuracy: %f\n', 1-svmCVError);
-
+% Average accuracy across folds to find optimal parameters
 CMS_fold_avg = mean(cvAccuracy2);
 [maxValue, maxIndex] = max(cvAccuracy2);
 disp(maxValue * 100)
-bestClassifiers(2, 1)=maxIndex;
-bestClassifiers(2, 2)=maxValue;
+bestClassifiers(3, 1)=maxIndex;
+bestClassifiers(3, 2)=maxValue;
 
 
 %% final classification on all offline data
