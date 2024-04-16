@@ -7,6 +7,14 @@ fs = 512;
 % normalize the frequencies
 Wp = [fc1 fc2]*2/fs;
 
+
+% Specify which subject we're running on 
+current_subject = 1;
+subject_id = sprintf('Subject%d', current_subject);  % Dynamic subject ID based on current_subject
+% How many runs per online session?
+session2_run_num = 4; % Subj1: 4, Subj2: 3,
+session3_run_num = 6; % Subj1: 6, Subj2: 6,
+
 % Build a Butterworth bandpass filter of 4th order
 % check the "butter" function in matlab
 N=4;
@@ -21,8 +29,10 @@ offline = struct('rest', {cell(2, 1)}, 'runs', {cell(3, 1)});
 runs = struct('eeg', {cell(3, 1)}, 'labels', {cell(3, 1)});
 
 % rest data processing
-subject = load("Subject1/Offline/Subject1_Offline_s1Rest");
-run = subject.("Subject1_Offline_s1Rest");
+offline_rest_path = sprintf("%s/Offline/%s_Offline_s1Rest", subject_id, subject_id);
+subject = load(offline_rest_path);
+run = subject.(sprintf("%s_Offline_s1Rest", subject_id));
+
 run1= filtfilt(b, a, run.signal); %filtfilt(d,filtfilt(b, a, run.signal));
 open = find(run.header.EVENT.TYP == 10);
 close = find(run.header.EVENT.TYP == 11);
@@ -43,8 +53,14 @@ for i=1:3
     data = cell(20, 1);
     runs.labels{i} = labels;
     runs.eeg{i} = data;
-    subject = load(strcat("Subject1/Offline/Subject1_Offline_s1r", num2str(i)));
-    run = subject.(strcat("Subject1_Offline_s1r", num2str(i)));
+
+    % test
+    offline_run_path = sprintf('%s/Offline/%s_Offline_s1r%d', subject_id, subject_id, i);
+    subject = load(offline_run_path);
+    run = subject.(sprintf('%s_Offline_s1r%d', subject_id, i));
+
+    % subject = load(strcat("Subject1/Offline/Subject1_Offline_s1r", num2str(i)));
+    % run = subject.(strcat("Subject1_Offline_s1r", num2str(i)));
     % filteredSignal = filtfilt(b, a, run.signal);
 
     run1= filtfilt(b, a, run.signal);%filtfilt(d,filtfilt(b, a, run.signal));
@@ -76,19 +92,29 @@ valuesStart=[7691, 7701];
 valuesEnd=[7692, 7693, 7702, 7703];
 valuesSustain=[102, 103, 202, 203];
 
-online = struct('session2', struct('eeg', {cell(4, 1)}, 'labels', struct('type', {cell(4, 1)}, 'end', {cell(4, 1)}, 'sustain', {cell(4, 1)})) ...
-    , 'session3', struct('rest', {cell(2, 1)}, 'eeg', {cell(6, 1)}, 'labels', struct('type', {cell(6, 1)}, 'end', {cell(6, 1)}, 'sustain', {cell(6, 1)})));
+online = struct('session2', struct('eeg', {cell(session2_run_num, 1)}, 'labels', struct('type', {cell(session2_run_num, 1)}, 'end', {cell(session2_run_num, 1)}, 'sustain', {cell(session2_run_num, 1)})) ...
+    , 'session3', struct('rest', {cell(2, 1)}, 'eeg', {cell(session3_run_num, 1)}, 'labels', struct('type', {cell(session3_run_num, 1)}, 'end', {cell(session3_run_num, 1)}, 'sustain', {cell(session3_run_num, 1)})));
 
 % Session 2 (first online)
-for i=1:4 % may have to manually change how many runs there were
-    type = zeros(20, 1);
+for i=1:session2_run_num
+    types = zeros(20, 1);
     ends = zeros(20, 1);
-    % sustain = zeros(20, 1); ???
+    sustains = zeros(20, 1);
     data = cell(20, 1);
-    session2.labels.type{i} = labels;
+
+    session2.labels.type{i} = types;
+    session2.labels.end{i} = ends;
+    session2.labels.sustain{i} = sustains;
+
     session2.eeg{i} = data;
-    subject = load(strcat("Subject1/Online/Subject1_Online_s2r", num2str(i)));
-    run = subject.(strcat("Subject1_Online_s2r", num2str(i)));
+
+    % test
+    online_run_path = sprintf('%s/Online/%s_Online_s2r%d', subject_id, subject_id, i);
+    subject = load(online_run_path);
+    run = subject.(sprintf('%s_Online_s2r%d', subject_id, i));
+
+    % subject = load(strcat("Subject1/Online/Subject1_Online_s2r", num2str(i)));
+    % run = subject.(strcat("Subject1_Online_s2r", num2str(i)));
     % filteredSignal = filtfilt(b, a, run.signal);
 
     run1= filtfilt(b, a, run.signal);%filtfilt(d,filtfilt(b, a, run.signal));
@@ -142,15 +168,25 @@ end
 online.session2 = session2;
 
 % Session 3 (second online)
-for i=1:6 % may have to manually change how many runs there were
-    type = zeros(20, 1);
+for i=1:session3_run_num % may have to manually change how many runs there were
+    types = zeros(20, 1);
     ends = zeros(20, 1);
-    % sustain = zeros(20, 1); ???
+    sustains = zeros(20, 1);
     data = cell(20, 1);
-    session3.labels.type{i} = labels;
+
+    session3.labels.type{i} = types;
+    session3.labels.end{i} = ends;
+    session3.labels.sustain{i} = sustains;
+
     session3.eeg{i} = data;
-    subject = load(strcat("Subject1/Online/Subject1_Online_s3r", num2str(i)));
-    run = subject.(strcat("Subject1_Online_s3r", num2str(i)));
+
+    % test
+    online_run_path = sprintf('%s/Online/%s_Online_s3r%d', subject_id, subject_id, i);
+    subject = load(online_run_path);
+    run = subject.(sprintf('%s_Online_s3r%d', subject_id, i));
+
+    % subject = load(strcat("Subject1/Online/Subject1_Online_s3r", num2str(i)));
+    % run = subject.(strcat("Subject1_Online_s3r", num2str(i)));
     % filteredSignal = filtfilt(b, a, run.signal);
 
     run1= filtfilt(b, a, run.signal); %filtfilt(d,filtfilt(b, a, run.signal));
@@ -205,8 +241,10 @@ end
 
 % rest data processing for session 3
 session3.rest = cell(2, 1);
-subject = load("Subject1/Online/Subject1_Online_s3Rest");
-run = subject.("Subject1_Online_s3Rest");
+
+online_rest_path = sprintf("%s/Online/%s_Online_s3Rest", subject_id, subject_id);
+subject = load(online_rest_path);
+run = subject.(sprintf("%s_Online_s3Rest", subject_id));
 run1= filtfilt(b, a, run.signal);%filtfilt(d,filtfilt(b, a, run.signal));
 open = find(run.header.EVENT.TYP == 10);
 close = find(run.header.EVENT.TYP == 11);
@@ -219,4 +257,6 @@ session3.rest{2} = run1(run.header.EVENT.POS(close) : run.header.EVENT.POS(finis
 online.session3 = session3;
 
 %% make subject struct subject -> offline/online -> rest/active -> labels/eeg
-Subject1 = struct('offline', offline, 'online', online);
+
+% Subject1 = struct('offline', offline, 'online', online);
+eval([subject_id ' = struct(''offline'', offline, ''online'', online);']);
