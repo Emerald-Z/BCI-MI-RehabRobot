@@ -47,14 +47,15 @@ function [MAV_feature, VAR_feature, ...
             end
         end
         SSC_feature(i) = slope_sign_changes;
-        %TOOO: idk if this is right
+
+        p=4;
 
         %ar_coeffs = [0.5, -0.3, 0.2, -0.1]; % Example autoregressive coefficients
-        [ar_coeffs, ~] = arburg(segment,4);
+        [ar_coeffs, ~] = arburg(segment,p);
 
         % Generate white noise with the same length as the segment
         % Scale the white noise by 4
-        white_noise = 4 * randn(size(segment));
+        white_noise = p * randn(size(segment));
     
         % Initialize the output signal array
         Xn = zeros(size(segment));
