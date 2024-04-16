@@ -1,6 +1,5 @@
 %% call extract features
-%do for all signals being processed -- go trial by trial
-%runs.eeg{1}{j} <-- 1 = run #, j = sample number
+
 [MAV, VAR, RMS, WL, ZC, SSC, AR, labels] = extract_features(window_size, overlap, fs, filteredSignal, label);
 
 %implement PCA
