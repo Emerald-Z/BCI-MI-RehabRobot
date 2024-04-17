@@ -1,11 +1,16 @@
 %% epoching is done here too
+
 %% offline sesion
+
 % filtering - bpf
-fc1 = 0.1; % first cutoff frequency in Hz 
-fc2 = 45; % second cutoff frequency in Hz -> i got this from a paper
+fc1 = 40; % first cutoff frequency in Hz 
+fc2 = 55; % I got this from PSD
 fs = 512;
+
 % normalize the frequencies
-Wp = [fc1 fc2]*2/fs;
+%Wp = [fc1 fc2]*2/fs;
+Wp = [fc1 fc2]/(fs/2);
+
 
 
 % Specify which subject we're running on 
@@ -17,8 +22,10 @@ session3_run_num = 6; % Subj1: 6, Subj2: 6,
 
 % Build a Butterworth bandpass filter of 4th order
 % check the "butter" function in matlab
-N=4;
-[b,a]=butter(N, Wp, 'bandpass');
+%N=4;
+%[b,a]=butter(N, Wp, 'bandpass');
+d = designfilt('bandpassiir', 'FilterOrder', 4, 'HalfPowerFrequency1', fc1, 'HalfPowerFrequency2', fc2, 'SampleRate', fs);
+
 
 % artefact rejection - need to display the data to do this
 
@@ -38,7 +45,8 @@ subject = load(offline_rest_path);
 run = subject.(sprintf("%s_Offline_s1Rest", subject_id));
 
 % Apply filtering to selected channels only
-run1 = filtfilt(b, a, run.signal(:, rows_to_keep)); %filtfilt(d,filtfilt(b, a, run.signal));
+run1 = filtfilt(d, run.signal(:, rows_to_keep)); %filtfilt(d,filtfilt(b, a, run.signal));
+%run1 = run.signal(:, rows_to_keep); % For calculating PSD
 
 open = find(run.header.EVENT.TYP == 10);
 close = find(run.header.EVENT.TYP == 11);
@@ -69,7 +77,8 @@ for i=1:3
     % run = subject.(strcat("Subject1_Offline_s1r", num2str(i)));
     % filteredSignal = filtfilt(b, a, run.signal);
 
-    run1= filtfilt(b, a, run.signal);%filtfilt(d,filtfilt(b, a, run.signal));
+    run1= filtfilt(d, run.signal);%filtfilt(d,filtfilt(b, a, run.signal));
+    %run1 = run.signal;  % For calculating PSD
     run1_h_et=run.header.EVENT.TYP;
     run1_h_ep=run.header.EVENT.POS;
 
@@ -126,7 +135,8 @@ for i=1:session2_run_num
     % run = subject.(strcat("Subject1_Online_s2r", num2str(i)));
     % filteredSignal = filtfilt(b, a, run.signal);
 
-    run1= filtfilt(b, a, run.signal);%filtfilt(d,filtfilt(b, a, run.signal));
+    run1= filtfilt(d, run.signal);%filtfilt(d,filtfilt(b, a, run.signal));
+    %run1 = run.signal;  % For calculating PSD
     run1_h_et=run.header.EVENT.TYP;
     run1_h_ep=run.header.EVENT.POS;
 
@@ -198,7 +208,8 @@ for i=1:session3_run_num % may have to manually change how many runs there were
     % run = subject.(strcat("Subject1_Online_s3r", num2str(i)));
     % filteredSignal = filtfilt(b, a, run.signal);
 
-    run1= filtfilt(b, a, run.signal); %filtfilt(d,filtfilt(b, a, run.signal));
+    run1= filtfilt(d, run.signal); %filtfilt(d,filtfilt(b, a, run.signal));
+    %run1 = run.signal;  % For calculating PSD
     run1_h_et=run.header.EVENT.TYP;
     run1_h_ep=run.header.EVENT.POS;
 
@@ -256,7 +267,8 @@ subject = load(online_rest_path);
 run = subject.(sprintf("%s_Online_s3Rest", subject_id));
 
 % Apply filtering to selected channels only
-run1 = filtfilt(b, a, run.signal(:, rows_to_keep)); %filtfilt(d,filtfilt(b, a, run.signal));
+run1 = filtfilt(d, run.signal(:, rows_to_keep)); %filtfilt(d,filtfilt(b, a, run.signal));
+%run1 = run.signal(:, rows_to_keep);  % For calculating PSD
 
 open = find(run.header.EVENT.TYP == 10);
 close = find(run.header.EVENT.TYP == 11);
@@ -268,6 +280,41 @@ session3.rest{2} = run1(run.header.EVENT.POS(close) : run.header.EVENT.POS(finis
 
 
 online.session3 = session3;
+
+%% PSD
+
+%{
+% Parameters
+fs = 512; % Sampling frequency
+window = 4 * fs; % Window size for PSD estimation (e.g., 4 seconds)
+noverlap = 2 * fs; % Overlap between windows (e.g., 2 seconds)
+nfft = 2^nextpow2(window); % Number of FFT points
+
+% Select a channel for PSD analysis
+channel_to_analyze = 1;
+
+% Compute PSD for rest data
+[psd_rest, freq_rest] = pwelch(offline.rest{1}(:, channel_to_analyze), window, noverlap, nfft, fs);
+psd_rest_db = 10*log10(psd_rest);
+
+% Compute PSD for task data (assuming offline.runs.eeg{1}{1} contains task data)
+[psd_task, freq_task] = pwelch(offline.runs.eeg{1}{1}(:, channel_to_analyze), window, noverlap, nfft, fs);
+psd_task_db = 10*log10(psd_task);
+
+% Plot PSD for rest and task
+figure;
+plot(freq_rest, psd_rest_db, 'b', 'LineWidth', 1.5);
+hold on;
+plot(freq_task, psd_task_db, 'r', 'LineWidth', 1.5);
+xlabel('Frequency (Hz)');
+ylabel('PSD (dB/Hz)');
+title(sprintf('Power Spectral Density - Channel %d', channel_to_analyze));
+legend('Rest', 'Task');
+grid on;
+
+% Set the frequency limit for the x-axis (e.g., 0 to 100 Hz)
+xlim([0, 100]);
+%}
 
 %% EOG Removal
 
@@ -308,6 +355,7 @@ plot(time_vector, data_to_plot);
 xlabel('Time (seconds)');
 ylabel('Amplitude (\muV)');  % Adjust the units based on your data
 title(sprintf('EOG Channel BEFORE FILTER', eog_channel));
+legend('EOG', 'Channel');
 hold off;
 
 %{
@@ -425,6 +473,7 @@ plot(time_vector, data_to_plot);
 xlabel('Time (seconds)');
 ylabel('Amplitude (\muV)');  % Adjust the units based on your data
 title(sprintf('EOG Channel AFTER FILTER', eog_channel));
+legend('EOG', 'Channel');
 hold off;
 
 %% Plot eeg channel
