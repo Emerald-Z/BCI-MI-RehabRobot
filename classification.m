@@ -92,7 +92,7 @@ for i = 1:k
     
     % Predict on validation set
     [predictedLabels, scores] = predict(classifiers1{i}, cvValidationFeatures);
-    %disp(scores);
+    disp(scores);
     % Compute accuracy for current fold
     cvAccuracy(i) = sum(predictedLabels == cvValidationLabels') / length(cvValidationLabels);
 end
@@ -218,38 +218,50 @@ finalCVaccuracy = zeros(2, 1);
 online = Subject1.online.session2;
 dataLen = 7;
 online_k = 4;
-TESTFEATUREL=zeros(4, 2339);
+features = 1000000;
+for i=1:online_k
+    if length(online_feats{i}) < features
+        features = length(online_feats{i});
+    end
+end
+TESTFEATUREL=zeros(4, features);
 for i=1:online_k
     prev = 1;
     for j=1:20
         right = prev + length(online_labels{i, 1}{j, 1}) - 1;
-        if right > 2339
-            right = 2339;
+        if right > features
+            right = features;
         end
         TESTFEATUREL(i, prev : right) = online_labels{i, 1}{j, 1}(1: right - prev + 1);
         prev = prev + length(online_labels{i, 1}{j, 1}) ;
     end
 end
 
-TESTDATA = zeros(online_k, 2339, numFeatures);
+TESTDATA = zeros(online_k, features, numFeatures);
 for i=1:online_k
-    TESTDATA(i, :,:) = online_feats{i,1}(1:2339, :); %vertcat(offline_feats{i,1}{:});
+    TESTDATA(i, :,:) = online_feats{i,1}(1:features, :); %vertcat(offline_feats{i,1}{:});
 end
 
 validationLabels = reshape(TESTFEATUREL, [], 1);
 validationFeatures = reshape(TESTDATA, [], numFeatures);
-predictedLabels = predict(final_model, validationFeatures);
+[predictedLabels, scores] = predict(final_model, validationFeatures);
+disp(scores)
 
 % Compute accuracy for current fold
 finalCVAccuracy(1) = sum(predictedLabels == validationLabels) / length(validationLabels)
 
 % session 3
-finalCVaccuracy = zeros(2, 1);
 online = Subject1.online.session3;
 
 dataLen = 69;
 online_k = 6;
-TESTFEATUREL=zeros(online_k, 2042);
+features = 0;
+for i=1:online_k
+    if length(online_feats{i}) < features
+        features = length(online_feats{i});
+    end
+end
+TESTFEATUREL=zeros(online_k, features);
 % dataLen = 7;
 % online_k = 4;
 % TESTFEATUREL=zeros(4, 2339);
@@ -258,22 +270,22 @@ for i=1:online_k
     prev = 1;
     for j=1:20
         right = prev + length(online_labels{i, 1}{j, 1}) - 1;
-        if right > 2042
-            right = 2042;
+        if right > features
+            right = features;
         end
         TESTFEATUREL(i, prev : right) = online_labels{i, 1}{j, 1}(1: right - prev + 1);
         prev = prev + length(online_labels{i, 1}{j, 1}) ;
     end
 end
 
-TESTDATA = zeros(online_k, 2042, numFeatures);
+TESTDATA = zeros(online_k, features, numFeatures);
 for i=1:online_k
-    TESTDATA(i, :,:) = online_feats{i,1}(1:2042, :); %vertcat(offline_feats{i,1}{:});
+    TESTDATA(i, :,:) = online_feats{i,1}(1:features, :); %vertcat(offline_feats{i,1}{:});
 end
 
 validationLabels = reshape(TESTFEATUREL, [], 1);
 validationFeatures = reshape(TESTDATA, [], numFeatures);
-predictedLabels = predict(final_model, validationFeatures);
-
+[predictedLabels, scores] = predict(final_model, validationFeatures);
+disp(scores)
 % Compute accuracy for current fold
 finalCVAccuracy(2) = sum(predictedLabels == validationLabels) / length(validationLabels);
