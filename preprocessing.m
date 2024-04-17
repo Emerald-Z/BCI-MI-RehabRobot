@@ -118,11 +118,14 @@ for i=1:session2_run_num
     types = zeros(20, 1);
     ends = zeros(20, 1);
     sustains = zeros(20, 1);
+    sustain_idxs = zeros(20, 1);
+
     data = cell(20, 1);
 
     session2.labels.type{i} = types;
     session2.labels.end{i} = ends;
     session2.labels.sustain{i} = sustains;
+    session2.labels.sustain_idx{i} = sustain_idxs;
 
     session2.eeg{i} = data;
 
@@ -145,7 +148,7 @@ for i=1:session2_run_num
     run1_sustain=[run1_h_ep(ismember(run1_h_et, valuesSustain))];
     r1_sustaintype=[run1_h_et(ismember(run1_h_et, valuesSustain))];
 
-    sustain_idx = 1;
+    sustain_index = 1;
     for j=1:20
         % append task label
         % floor(r1_trialtype(j,1)/100)
@@ -167,17 +170,20 @@ for i=1:session2_run_num
         if (session2.labels.end{i}(j)== 1)
             % fail (sustain never reached)
             session2.labels.sustain{i}(j) = 0;
+            session2.labels.sustain_idx{i}(j) = -1;
             % add samples
             session2.eeg{i}{j} = run1(run1_trials(j,1):run1_trials(j,2), rows_to_keep);
         else
+            session2.labels.sustain_idx{i}(j) = run1_sustain(sustain_index) - run1_trials(j,1); % How long until sustain?
+
             % process sustain
-            if (mod(r1_sustaintype(sustain_idx), 100) == 2)
+            if (mod(r1_sustaintype(sustain_index), 100) == 2)
                 session2.labels.sustain{i}(j) = 1; % failed to sustain
             else 
                 session2.labels.sustain{i}(j) = 2; % sustain succeeded
             end
-            session2.eeg{i}{j} = run1(run1_trials(j,1) : run1_sustain(sustain_idx), rows_to_keep);
-            sustain_idx = sustain_idx + 1;
+            session2.eeg{i}{j} = run1(run1_trials(j,1) : run1_sustain(sustain_index), rows_to_keep);
+            sustain_index = sustain_index + 1;
         end
     end
 
@@ -191,11 +197,14 @@ for i=1:session3_run_num % may have to manually change how many runs there were
     types = zeros(20, 1);
     ends = zeros(20, 1);
     sustains = zeros(20, 1);
+    sustain_idxs = zeros(20, 1);
     data = cell(20, 1);
 
     session3.labels.type{i} = types;
     session3.labels.end{i} = ends;
     session3.labels.sustain{i} = sustains;
+    session3.labels.sustain_idx{i} = sustain_idxs;
+
 
     session3.eeg{i} = data;
 
@@ -218,7 +227,7 @@ for i=1:session3_run_num % may have to manually change how many runs there were
     run1_sustain=[run1_h_ep(ismember(run1_h_et, valuesSustain))];
     r1_sustaintype=[run1_h_et(ismember(run1_h_et, valuesSustain))];
 
-    sustain_idx = 1;
+    sustain_index = 1;
     for j=1:20
         % append task label (rest vs reach)
         % floor(r1_trialtype(j,1)/100)
@@ -242,17 +251,20 @@ for i=1:session3_run_num % may have to manually change how many runs there were
         if (session3.labels.end{i}(j) == 1)
             % fail (sustain never reached)
             session3.labels.sustain{i}(j) = 0;
+            session3.labels.sustain_idx{i}(j) = -1;
+
             % add samples
             session3.eeg{i}{j} = run1(run1_trials(j,1):run1_trials(j,2), rows_to_keep);
         else
+            session3.labels.sustain_idx{i}(j) = run1_sustain(sustain_index) - run1_trials(j,1); % How long until sustain?
             % process sustain
-            if (mod(r1_sustaintype(sustain_idx), 100) == 2)
+            if (mod(r1_sustaintype(sustain_index), 100) == 2)
                 session3.labels.sustain{i}(j) = 1; % failed to sustain
             else 
                 session3.labels.sustain{i}(j) = 2; % sustain succeeded
             end
-            session3.eeg{i}{j} = run1(run1_trials(j,1) : run1_sustain(sustain_idx), rows_to_keep);
-            sustain_idx = sustain_idx + 1;
+            session3.eeg{i}{j} = run1(run1_trials(j,1) : run1_sustain(sustain_index), rows_to_keep);
+            sustain_index = sustain_index + 1;
         end
     end
 
