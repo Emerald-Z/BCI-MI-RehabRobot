@@ -47,7 +47,7 @@ CM_fold_avg=sum(MAV_ALL_acc)/5;
 [maxValue, maxIndex] = max(MAV_ALL_acc);
 disp(maxValue)
 bestClassifiers(1, 1)=maxIndex;
-bestClassifiers(1, 2)=maxValue;
+bestClassifiers(1, 2)=maxValue/100;
 
 % indices=(maxIndex-1)*(numFeatures*30)+1:maxIndex*(numFeatures*30);
 % remaining_indices = setdiff(1:150*numFeatures, indices);
@@ -74,6 +74,7 @@ classifiers1=cell(k,1);
 for i = 1:k
     % Split data into training and validation sets for current fold
     other_indices = setdiff(1:size(DATA, 1), i);
+    train = vertcat(DATA(other_indices, :, :));
 
     cvTrainFeatures = vertcat(DATA(other_indices, :, :));
     cvTrainFeatures = reshape(train, [], numFeatures);
@@ -129,7 +130,7 @@ for i = 1:k
     other_indices = setdiff(1:size(DATA, 1), i);
 
     cvTrainFeatures = vertcat(DATA(other_indices, :, :));
-    cvTrainFeatures = reshape(train, [], numFeatures);
+    cvTrainFeatures = reshape(cvTrainFeatures, [], numFeatures);
     cvTrainLabels = vertcat(FEATUREL(other_indices, :, :));
     cvTrainLabels = reshape(cvTrainLabels', [], 1);
     cvValidationFeatures = squeeze(DATA(i, :, :));
@@ -152,7 +153,7 @@ disp(maxValue * 100)
 bestClassifiers(3, 1)=maxIndex;
 bestClassifiers(3, 2)=maxValue;
 
-%%
+%% Gaussian Kernel
 cvAccuracy3 = zeros(k, 1); % Array to store cross-validation accuracy
 CMG_fold_avg=0;
 CMG_test_avg=0;
@@ -164,7 +165,7 @@ for i = 1:k
     other_indices = setdiff(1:size(DATA, 1), i);
 
     cvTrainFeatures = vertcat(DATA(other_indices, :, :));
-    cvTrainFeatures = reshape(train, [], numFeatures);
+    cvTrainFeatures = reshape(cVTrainFeatures, [], numFeatures);
     cvTrainLabels = vertcat(FEATUREL(other_indices, :, :));
     cvTrainLabels = reshape(cvTrainLabels', [], 1);
     cvValidationFeatures = squeeze(DATA(i, :, :));
@@ -189,11 +190,34 @@ bestClassifiers(4, 2)=maxValue;
 
 
 %% final classification on all offline data
-[maxValue, maxIndex] = max(bestClassifiers(2, :));
+[maxValue, maxIndex] = max(bestClassifiers(:, 2));
 disp(maxIndex)
+%example on SVM
+trainLabels = reshape(FEATUREL, [], 1);
+trainFeatures = reshape(DATA, [], numFeatures);
+final_model = fitcecoc(trainFeatures, trainLabels, 'Learners', t, 'Coding', 'onevsone');
 
 
+%% assess on session 2, 3 
+finalCVaccuracy = zeros(2, 1);
+online = Subject1.online.session2;
+dataLen = 69;
+online_k = 4;
+TESTFEATUREL=zeros(online_k, 2796);
+for i=1:online_k
+    for j=1:20
+        TESTFEATUREL(i, (j-1)* dataLen + 1 : j* dataLen) = online.labels.type{i, 1}(j,1) * ones(dataLen, 1);
+    end
+end
 
-%% assess on session 2, 3 at sample and trial level (evidence accumulation framework)
+TESTDATA = zeros(online_k, 2794, numFeatures);
+for i=1:online_k
+    TESTDATA(i, :,:) = online_feats{i,1}(1:2794, :); %vertcat(offline_feats{i,1}{:});
+end
 
+validationLabels = reshape(TESTFEATUREL, [], 1);
+validationFeatures = reshape(TESTDATA, [], numFeatures);
+predictedLabels = predict(final_model, validationFeatures);
 
+% Compute accuracy for current fold
+finalCVAccuracy(1) = sum(predictedLabels == validationLabels(1:11176)) / length(validationLabels);
