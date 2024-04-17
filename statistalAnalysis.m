@@ -13,9 +13,16 @@ end
 
 
 %% evidence accumulation
-alpha = 0.01;
-for t=1:T
-    p_t = classify; % classify with final model
-    P(t) = alpha * P(t-1) + (1-alpha) * p_t
-
+alpha = 0.1;
+Pt = cell(4, 1);
+for i=1:4
+    temp = zeros(size(sample_probabilities{i}));
+    for t = 1:length(sample_probabilities{i})
+        if t == 1
+            temp(t, :) = sample_probabilities{i}(t, :); % For the first sample, use the original probability distribution
+        else
+            temp(t, :) = alpha * temp(t-1, :) + (1 - alpha) * sample_probabilities{i}(t, :); % Apply exponential smoothing
+        end
+    end
+    Pt{i} = temp;
 end
