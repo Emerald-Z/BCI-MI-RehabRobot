@@ -3,20 +3,23 @@
 %runs.eeg{1}{j} <-- 1 = run #, j = sample number
 runs = Subject1.offline.runs;
 offline_feats = cell(3,1);
+offline_labels = cell(3,1);
 
 for i=1:3
     feats = cell(20, 1);
     featsR = cell(20, 1);
     featureMatrix = [];
+    of = cell(20, 1);
     for j=1:20
         filteredSignal = runs.eeg{i}{j};
-        window_size = 0.2;
+        window_size = 2.2;
         fs = 512;
         label = runs.labels{i}(j);
-        overlap = 0.75;
+        overlap = 0.68;
         
         [MAV, VAR, RMS, WL, ZC, SSC, AR, labels] = extract_features(window_size, overlap, fs, filteredSignal, label);
-        
+        of{j} = ones(length(labels), 1) * label;
+
         %implement PCA
         % Combine features into a matrix
         temp = [MAV; VAR; RMS; WL; ZC; SSC; AR]';
@@ -54,6 +57,7 @@ for i=1:3
     % featsR{j} = 
 
     offline_feats{i} = featureMatrix;
+    offline_labels{i} = of;
 end
 
 online_feats = cell(4,1);
@@ -65,10 +69,10 @@ for i=1:4
 
     for j=1:20
         filteredSignal = session2.eeg{i}{j};
-        window_size = 0.2;
+        window_size = 2.2;
         fs = 512;
         label = session2.labels.type{i, 1}(j);
-        overlap = 0.75;
+        overlap = 0.68;
         % sustain trial
         if session2.labels.sustain{i, 1}(j) == 0
             filteredSignal = filteredSignal;
