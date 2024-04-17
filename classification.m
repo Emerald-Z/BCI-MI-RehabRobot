@@ -5,7 +5,7 @@ offline = Subject1.offline.runs;
 numFeatures = 7;
 %% build classifier using offline data and test with run wise cross val -> independence
 % Linear - k - 1 fold, test on last run of subject data
-dataLen = 135;
+dataLen = 7;
 k = 3; % num runs
 classificationErrors = zeros(k, 1);
 CM_fold_avg=0;
@@ -25,7 +25,7 @@ end
 
 CC_avg=zeros(2,2,1,k); 
 CM=zeros(2,2);
-MAV_ALL_acc=zeros(1, 5);
+MAV_ALL_acc=zeros(1, k);
 for i=1:k
     % linear classifier
     test = squeeze(DATA(i, :, :));
@@ -39,13 +39,16 @@ for i=1:k
     % linear
     [TstMAVVARFALL TstMAVVARErrALL] = classify(test,train, train_labels);
     [CC_avg(:,:,1,i) dum1 MAV_ALL_acc(i) dum2] = confusion(test_labels, TstMAVVARFALL);
-    disp(MAV_ALL_acc(i))
+    % disp(MAV_ALL_acc(i))
     % TstAcc_MAVVAR_All_stor(i) = TstAcc_MAVVAR_ALL;
     CM(:,:,1) = CM(:,:,1) + confusionmat(test_labels, TstMAVVARFALL');
 end
-CM_fold_avg=sum(MAV_ALL_acc)/5;
+CM_fold_avg=mean(MAV_ALL_acc);
 [maxValue, maxIndex] = max(MAV_ALL_acc);
+disp("Max linear");
 disp(maxValue)
+disp("Mean linear");
+disp(CM_fold_avg);
 bestClassifiers(1, 1)=maxIndex;
 bestClassifiers(1, 2)=maxValue/100;
 
@@ -77,7 +80,7 @@ for i = 1:k
     train = vertcat(DATA(other_indices, :, :));
 
     cvTrainFeatures = vertcat(DATA(other_indices, :, :));
-    cvTrainFeatures = reshape(train, [], numFeatures);
+    cvTrainFeatures = reshape(cvTrainFeatures, [], numFeatures);
     cvTrainLabels = vertcat(FEATUREL(other_indices, :, :));
     cvTrainLabels = reshape(cvTrainLabels', [], 1);
     cvValidationFeatures = squeeze(DATA(i, :, :));
@@ -88,7 +91,7 @@ for i = 1:k
     
     % Predict on validation set
     [predictedLabels, scores] = predict(classifiers1{i}, cvValidationFeatures);
-    disp(scores);
+    %disp(scores);
     % Compute accuracy for current fold
     cvAccuracy(i) = sum(predictedLabels == cvValidationLabels') / length(cvValidationLabels);
 end
@@ -96,7 +99,10 @@ end
 % Average accuracy across folds to find optimal parameters
 CMQ_fold_avg = mean(cvAccuracy);
 [maxValue, maxIndex] = max(cvAccuracy);
+disp("Max quadratic");
 disp(maxValue * 100)
+disp("Mean quadratic");
+disp(CMQ_fold_avg * 100);
 bestClassifiers(2, 1)=maxIndex;
 bestClassifiers(2, 2)=maxValue;
 
@@ -149,7 +155,10 @@ end
 % Average accuracy across folds to find optimal parameters
 CMS_fold_avg = mean(cvAccuracy2);
 [maxValue, maxIndex] = max(cvAccuracy2);
+disp("Max SVM");
 disp(maxValue * 100)
+disp("Mean SVM");
+disp(CMS_fold_avg * 100);
 bestClassifiers(3, 1)=maxIndex;
 bestClassifiers(3, 2)=maxValue;
 
@@ -165,7 +174,7 @@ for i = 1:k
     other_indices = setdiff(1:size(DATA, 1), i);
 
     cvTrainFeatures = vertcat(DATA(other_indices, :, :));
-    cvTrainFeatures = reshape(cVTrainFeatures, [], numFeatures);
+    cvTrainFeatures = reshape(cvTrainFeatures, [], numFeatures);
     cvTrainLabels = vertcat(FEATUREL(other_indices, :, :));
     cvTrainLabels = reshape(cvTrainLabels', [], 1);
     cvValidationFeatures = squeeze(DATA(i, :, :));
@@ -184,25 +193,29 @@ end
 % Average accuracy across folds to find optimal parameters
 CMG_fold_avg = mean(cvAccuracy3);
 [maxValue, maxIndex] = max(cvAccuracy3);
+disp("Max Gaussian Kernel");
 disp(maxValue * 100)
+disp("Max Gaussian Kernel");
+disp(CMG_fold_avg * 100);
 bestClassifiers(4, 1)=maxIndex;
 bestClassifiers(4, 2)=maxValue;
 
 
 %% final classification on all offline data
 [maxValue, maxIndex] = max(bestClassifiers(:, 2));
-disp(maxIndex)
+disp(maxIndex);
 %example on SVM
 trainLabels = reshape(FEATUREL, [], 1);
 trainFeatures = reshape(DATA, [], numFeatures);
-final_model = fitcecoc(trainFeatures, trainLabels, 'Learners', t, 'Coding', 'onevsone');
+%final_model = fitcecoc(trainFeatures, trainLabels, 'Learners', t, 'Coding', 'onevsone');
+final_model = fitcdiscr(trainFeatures, trainLabels, 'DiscrimType', 'quadratic');
 
 
 %% assess on session 2, 3 
 % session 2
 finalCVaccuracy = zeros(2, 1);
 online = Subject1.online.session2;
-dataLen = 69;
+dataLen = 7;
 online_k = 4;
 TESTFEATUREL=zeros(4, 2339);
 for i=1:online_k
@@ -232,7 +245,7 @@ finalCVAccuracy(1) = sum(predictedLabels == validationLabels) / length(validatio
 % session 3
 finalCVaccuracy = zeros(2, 1);
 online = Subject1.online.session3;
-dataLen = 69;
+dataLen = 7;
 online_k = 4;
 TESTFEATUREL=zeros(4, 2339);
 for i=1:online_k
