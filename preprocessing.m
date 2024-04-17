@@ -28,24 +28,30 @@ N=4;
 offline = struct('rest', {cell(2, 1)}, 'runs', {cell(3, 1)});
 runs = struct('eeg', {cell(3, 1)}, 'labels', {cell(3, 1)});
 
+
+% Create logical index to select rows to keep
+rows_to_keep = setdiff(1:71, [13, 14, 18, 19, 65:71]);
+
 % rest data processing
 offline_rest_path = sprintf("%s/Offline/%s_Offline_s1Rest", subject_id, subject_id);
 subject = load(offline_rest_path);
 run = subject.(sprintf("%s_Offline_s1Rest", subject_id));
 
-run1= filtfilt(b, a, run.signal); %filtfilt(d,filtfilt(b, a, run.signal));
+% Apply filtering to selected channels only
+run1 = filtfilt(b, a, run.signal(:, rows_to_keep)); %filtfilt(d,filtfilt(b, a, run.signal));
+
 open = find(run.header.EVENT.TYP == 10);
 close = find(run.header.EVENT.TYP == 11);
 finish = find(run.header.EVENT.TYP == 55555);
-offline.rest{1} = run1(run.header.EVENT.POS(open) : run.header.EVENT.POS(close));% 10 
-offline.rest{2} = run1(run.header.EVENT.POS(close) : run.header.EVENT.POS(finish(2)));
+
+% Extract data for open and close events from selected channels only
+offline.rest{1} = run1(run.header.EVENT.POS(open) : run.header.EVENT.POS(close), :);% 10
+offline.rest{2} = run1(run.header.EVENT.POS(close) : run.header.EVENT.POS(finish(2)), :);
 
 % offline data
 valuesStart=[7691, 7701];
 valuesEnd=[7692, 7702];
 
-% Create logical index to select rows to keep
-rows_to_keep = setdiff(1:71, [13, 14, 18, 19, 65:71]);
 
 %runs (task data)
 for i=1:3
@@ -248,18 +254,445 @@ session3.rest = cell(2, 1);
 online_rest_path = sprintf("%s/Online/%s_Online_s3Rest", subject_id, subject_id);
 subject = load(online_rest_path);
 run = subject.(sprintf("%s_Online_s3Rest", subject_id));
-run1= filtfilt(b, a, run.signal);%filtfilt(d,filtfilt(b, a, run.signal));
+
+% Apply filtering to selected channels only
+run1 = filtfilt(b, a, run.signal(:, rows_to_keep)); %filtfilt(d,filtfilt(b, a, run.signal));
+
 open = find(run.header.EVENT.TYP == 10);
 close = find(run.header.EVENT.TYP == 11);
 finish = find(run.header.EVENT.TYP == 55555);
 
-session3.rest{1} = run1(run.header.EVENT.POS(open) : run.header.EVENT.POS(close));% 10
-session3.rest{2} = run1(run.header.EVENT.POS(close) : run.header.EVENT.POS(finish(2)));
+% Extract data for open and close events from selected channels only
+session3.rest{1} = run1(run.header.EVENT.POS(open) : run.header.EVENT.POS(close), :);% 10
+session3.rest{2} = run1(run.header.EVENT.POS(close) : run.header.EVENT.POS(finish(2)), :);
 
 
 online.session3 = session3;
+
+%% EOG Removal
+
+% Calculate number of samples for N seconds
+samples_to_plot = 10 * fs;
+
+% Create the time vector for plotting
+time_vector = (0:samples_to_plot - 1) / fs;
+
+% Plot EOG channel
+eog_channel = 32;  % Adjust the EOG channel index if necessary
+
+
+% Select the data for plotting (rest)
+size(offline.rest{1}, 1)
+if size(offline.rest{1}, 1) >= samples_to_plot
+    eog_data_to_plot = offline.rest{1}(1:samples_to_plot, eog_channel);
+else
+    error('Not enough samples to plot. Check data dimensions and sampling rate. 288');
+end
+
+% Plot the EOG data
+figure;
+plot(time_vector, eog_data_to_plot);
+hold on;
+grid on;
+
+channel_to_plot = 1;
+% Select the data for plotting (rest)
+if size(offline.rest{1}, 1) >= samples_to_plot
+    data_to_plot = offline.rest{1}(1:samples_to_plot, channel_to_plot);
+else
+    error('Not enough samples to plot. Check data dimensions and sampling rate. 403');
+end
+
+% Plot the channel data
+plot(time_vector, data_to_plot);
+xlabel('Time (seconds)');
+ylabel('Amplitude (\muV)');  % Adjust the units based on your data
+title(sprintf('EOG Channel BEFORE FILTER', eog_channel));
+hold off;
+
+%{
+remove_samples = @(data, threshold, window_size) ...
+    unique(cell2mat(arrayfun(@(i) max(1, i - window_size):min(size(data, 1), i + window_size), ...
+                             find(abs(data(:, eog_channel)) > threshold), 'UniformOutput', false)'));
+
+% IMPORTANT VARS
+high_window_size = 50; % how much padding around the removed points are also removed?
+stdmult = 3; % above and below this sd, points are removed
+
+% Remove samples for offline.rest
+for i = 1:length(offline.rest)
+    high_threshold = calculate_eog_threshold(offline.rest{i}, stdmult);  % Adjust the multiplier as needed
+    eog_high_spikes = remove_samples(offline.rest{i}, high_threshold, high_window_size);
+    indices_to_remove = unique(eog_high_spikes);
+    offline.rest{i}(indices_to_remove, :) = [];
+end
+
+% Remove samples for offline.runs.eeg
+for i = 1:length(offline.runs.eeg)
+    for j = 1:length(offline.runs.eeg{i})
+        high_threshold = calculate_eog_threshold(offline.runs.eeg{i}{j}, stdmult);  % Adjust the multiplier as needed
+        eog_high_spikes = remove_samples(offline.runs.eeg{i}{j}, high_threshold, high_window_size);
+        indices_to_remove = unique(eog_high_spikes);
+        offline.runs.eeg{i}{j}(indices_to_remove, :) = [];
+    end
+end
+
+% Remove samples for online.session2.eeg
+for i = 1:length(online.session2.eeg)
+    for j = 1:length(online.session2.eeg{i})
+        high_threshold = calculate_eog_threshold(online.session2.eeg{i}{j}, stdmult);  % Adjust the multiplier as needed
+        eog_high_spikes = remove_samples(online.session2.eeg{i}{j}, high_threshold, high_window_size);
+        indices_to_remove = unique(eog_high_spikes);
+        online.session2.eeg{i}{j}(indices_to_remove, :) = [];
+    end
+end
+
+% Remove samples for online.session3.rest
+for i = 1:length(online.session3.rest)
+    high_threshold = calculate_eog_threshold(online.session3.rest{i}, stdmult);  % Adjust the multiplier as needed
+    eog_high_spikes = remove_samples(online.session3.rest{i}, high_threshold, high_window_size);
+    indices_to_remove = unique(eog_high_spikes);
+    online.session3.rest{i}(indices_to_remove, :) = [];
+end
+
+% Remove samples for online.session3.eeg
+for i = 1:length(online.session3.eeg)
+    for j = 1:length(online.session3.eeg{i})
+        high_threshold = calculate_eog_threshold(online.session3.eeg{i}{j}, stdmult);  % Adjust the multiplier as needed
+        eog_high_spikes = remove_samples(online.session3.eeg{i}{j}, high_threshold, high_window_size);
+        indices_to_remove = unique(eog_high_spikes);
+        online.session3.eeg{i}{j}(indices_to_remove, :) = [];
+    end
+end
+%}
+
+
+% Remove EOG artifacts using polynomial regression followed by adaptive thresholding
+polynomial_order = 3; % Specify the desired polynomial order
+threshold_multiplier = 3; % Specify the desired threshold multiplier
+window_size = 10; % Specify the window size for calculating the mean of surrounding values
+offline.rest = cellfun(@(x) remove_eog_artifacts_regression(x, eog_channel, polynomial_order, threshold_multiplier, window_size), offline.rest, 'UniformOutput', false);
+offline.runs.eeg = cellfun(@(x) cellfun(@(y) remove_eog_artifacts_regression(y, eog_channel, polynomial_order, threshold_multiplier, window_size), x, 'UniformOutput', false), offline.runs.eeg, 'UniformOutput', false);
+online.session2.eeg = cellfun(@(x) cellfun(@(y) remove_eog_artifacts_regression(y, eog_channel, polynomial_order, threshold_multiplier, window_size), x, 'UniformOutput', false), online.session2.eeg, 'UniformOutput', false);
+online.session3.rest = cellfun(@(x) remove_eog_artifacts_regression(x, eog_channel, polynomial_order, threshold_multiplier, window_size), online.session3.rest, 'UniformOutput', false);
+online.session3.eeg = cellfun(@(x) cellfun(@(y) remove_eog_artifacts_regression(y, eog_channel, polynomial_order, threshold_multiplier, window_size), x, 'UniformOutput', false), online.session3.eeg, 'UniformOutput', false);
+
+
+%{
+% Remove EOG artifacts using higher-order polynomial regression
+polynomial_order = 3; % Specify the desired polynomial order
+offline.rest = cellfun(@(x) remove_eog_artifacts_regression(x, eog_channel, polynomial_order), offline.rest, 'UniformOutput', false);
+offline.runs.eeg = cellfun(@(x) cellfun(@(y) remove_eog_artifacts_regression(y, eog_channel, polynomial_order), x, 'UniformOutput', false), offline.runs.eeg, 'UniformOutput', false);
+online.session2.eeg = cellfun(@(x) cellfun(@(y) remove_eog_artifacts_regression(y, eog_channel, polynomial_order), x, 'UniformOutput', false), online.session2.eeg, 'UniformOutput', false);
+online.session3.rest = cellfun(@(x) remove_eog_artifacts_regression(x, eog_channel, polynomial_order), online.session3.rest, 'UniformOutput', false);
+online.session3.eeg = cellfun(@(x) cellfun(@(y) remove_eog_artifacts_regression(y, eog_channel, polynomial_order), x, 'UniformOutput', false), online.session3.eeg, 'UniformOutput', false);
+%}
+
+% Calculate number of samples for N seconds
+samples_to_plot = 10 * fs;
+
+% Create the time vector for plotting
+time_vector = (0:samples_to_plot - 1) / fs;
+
+% Plot EOG channel
+eog_channel = 32;  % Adjust the EOG channel index if necessary
+
+
+% Select the data for plotting (rest)
+size(offline.rest{1}, 1)
+if size(offline.rest{1}, 1) >= samples_to_plot
+    eog_data_to_plot = offline.rest{1}(1:samples_to_plot, eog_channel);
+else
+    error('Not enough samples to plot. Check data dimensions and sampling rate. 288');
+end
+
+
+% Plot the EOG data
+figure;
+plot(time_vector, eog_data_to_plot);
+hold on;
+grid on;
+
+% Select the data for plotting (rest)
+if size(offline.rest{1}, 1) >= samples_to_plot
+    data_to_plot = offline.rest{1}(1:samples_to_plot, channel_to_plot);
+else
+    error('Not enough samples to plot. Check data dimensions and sampling rate. 403');
+end
+
+% Plot the channel data
+plot(time_vector, data_to_plot);
+xlabel('Time (seconds)');
+ylabel('Amplitude (\muV)');  % Adjust the units based on your data
+title(sprintf('EOG Channel AFTER FILTER', eog_channel));
+hold off;
+
+%% Plot eeg channel
+
+channel_to_plot = 1;  % Adjust as necessary
+
+% Calculate number of samples for N seconds
+samples_to_plot = 10 * fs; 
+
+%{
+% Select the data for plotting
+if size(offline.runs.eeg{1}{1}, 1) >= samples_to_plot
+    data_to_plot = offline.runs.eeg{1}{1}(1:samples_to_plot, channel_to_plot);
+else
+    error('Not enough samples to plot. Check data dimensions and sampling rate.');
+end
+%}
+
+% Select the data for plotting (rest)
+if size(offline.rest{1}, 1) >= samples_to_plot
+    data_to_plot = offline.rest{1}(1:samples_to_plot, channel_to_plot);
+else
+    error('Not enough samples to plot. Check data dimensions and sampling rate. 403');
+end
+
+% Create the time vector for plotting
+time_vector = (0:samples_to_plot - 1) / fs;
+
+% Plot the data
+figure;
+plot(time_vector, data_to_plot);
+xlabel('Time (seconds)');
+ylabel('Amplitude (\muV)');  % Adjust the units based on your data
+title(sprintf('EEG Channel %d Over 15 Seconds', channel_to_plot));
+grid on;
+
+
+%% Calculate Mean/Median of Rest Data
+% Session 1 Rest Mean
+% Only consider open eye rest
+
+s1_rest_mean = mean(offline.rest{1}, 1);
+
+s3_rest_mean = mean(online.session3.rest{1}, 1);
+
+
+%% Correct Task Data Using Rest Means
+% Correct Session 1 and 2
+for i = 1:length(offline.runs.eeg)
+    for j = 1:length(offline.runs.eeg{i})
+        % offline.runs.eeg{i}{j} = 0;
+        offline.runs.eeg{i}{j} = bsxfun(@minus, offline.runs.eeg{i}{j}, s1_rest_mean);
+    end
+end
+
+for i = 1:length(online.session2.eeg)
+    for j = 1:length(online.session2.eeg{i})
+        % online.session2.eeg{i}{j} = 0;
+        online.session2.eeg{i}{j} = bsxfun(@minus, online.session2.eeg{i}{j}, s1_rest_mean);
+    end
+end
+
+% Correct Session 3
+for i = 1:length(online.session3.eeg)
+    for j = 1:length(online.session3.eeg{i})
+        % online.session3.eeg{i}{j} = 0;
+        online.session3.eeg{i}{j} = bsxfun(@minus, online.session3.eeg{i}{j}, s3_rest_mean);
+    end
+end
+
+%% Plot eeg channel
+
+channel_to_plot = 1;  % Adjust as necessary
+
+% Calculate number of samples for N seconds
+samples_to_plot = 10 * fs; 
+
+%{
+% Select the data for plotting
+if size(offline.runs.eeg{1}{1}, 1) >= samples_to_plot
+    data_to_plot = offline.runs.eeg{1}{1}(1:samples_to_plot, channel_to_plot);
+else
+    error('Not enough samples to plot. Check data dimensions and sampling rate.');
+end
+%}
+
+% Select the data for plotting (rest)
+if size(offline.rest{1}, 1) >= samples_to_plot
+    data_to_plot = offline.rest{1}(1:samples_to_plot, channel_to_plot);
+else
+    error('Not enough samples to plot. Check data dimensions and sampling rate. 403');
+end
+
+% Create the time vector for plotting
+time_vector = (0:samples_to_plot - 1) / fs;
+
+% Plot the data
+figure;
+plot(time_vector, data_to_plot);
+xlabel('Time (seconds)');
+ylabel('Amplitude (\muV)');  % Adjust the units based on your data
+title(sprintf('EEG Channel %d Over 15 Seconds', channel_to_plot));
+grid on;
+
 
 %% make subject struct subject -> offline/online -> rest/active -> labels/eeg
 
 % Subject1 = struct('offline', offline, 'online', online);
 eval([subject_id ' = struct(''offline'', offline, ''online'', online);']);
+
+%% Functions
+function threshold = calculate_eog_threshold(eog_data, multiplier)
+    eog_channel = 32;
+    threshold = multiplier * std(eog_data(:, eog_channel));
+end
+
+%{
+function clean_eeg = remove_eog_artifacts_regression(eeg_data, eog_channel)
+    % Perform EOG artifact removal using regression
+    
+    % Get the number of channels and samples
+    num_channels = size(eeg_data, 2);
+    num_samples = size(eeg_data, 1);
+    
+    % Initialize the cleaned EEG data
+    clean_eeg = eeg_data;
+    
+    % Perform regression for each EEG channel
+    for i = 1:num_channels
+        if i ~= eog_channel
+            % Perform linear regression between EOG channel and current EEG channel
+            X = [ones(num_samples, 1), eeg_data(:, eog_channel)];
+            beta = X \ eeg_data(:, i);
+            
+            % Estimate the EOG artifact using the regression coefficients
+            eog_artifact = X * beta;
+            
+            % Remove the EOG artifact from the current EEG channel
+            clean_eeg(:, i) = eeg_data(:, i) - eog_artifact;
+        end
+    end
+end
+%}
+%{
+function clean_eeg = remove_eog_artifacts_regression(eeg_data, eog_channel, polynomial_order)
+    % Perform EOG artifact removal using regression
+    
+    % Get the number of channels and samples
+    num_channels = size(eeg_data, 2);
+    num_samples = size(eeg_data, 1);
+    
+    % Initialize the cleaned EEG data
+    clean_eeg = eeg_data;
+    
+    % Perform regression for each EEG channel
+    for i = 1:num_channels
+        if i ~= eog_channel
+            % Create the polynomial terms for regression
+            X = zeros(num_samples, polynomial_order + 1);
+            for j = 0:polynomial_order
+                X(:, j+1) = eeg_data(:, eog_channel) .^ j;
+            end
+            
+            % Perform polynomial regression between EOG channel and current EEG channel
+            beta = X \ eeg_data(:, i);
+            
+            % Estimate the EOG artifact using the regression coefficients
+            eog_artifact = X * beta;
+            
+            % Remove the EOG artifact from the current EEG channel
+            clean_eeg(:, i) = eeg_data(:, i) - eog_artifact;
+        end
+    end
+end
+%}
+%{
+function clean_eeg = remove_eog_artifacts_regression(eeg_data, eog_channel, polynomial_order, threshold_multiplier)
+    % Perform EOG artifact removal using polynomial regression and adaptive thresholding
+    
+    % Get the number of channels and samples
+    num_channels = size(eeg_data, 2);
+    num_samples = size(eeg_data, 1);
+    
+    % Initialize the cleaned EEG data
+    clean_eeg = eeg_data;
+    
+    % Perform regression for each EEG channel
+    for i = 1:num_channels
+        if i ~= eog_channel
+            % Create the polynomial terms for regression
+            X = zeros(num_samples, polynomial_order + 1);
+            for j = 0:polynomial_order
+                X(:, j+1) = eeg_data(:, eog_channel) .^ j;
+            end
+            
+            % Perform polynomial regression between EOG channel and current EEG channel
+            beta = X \ eeg_data(:, i);
+            
+            % Estimate the EOG artifact using the regression coefficients
+            eog_artifact = X * beta;
+            
+            % Calculate the adaptive threshold for the EOG artifact
+            threshold = threshold_multiplier * std(eog_artifact);
+            
+            % Remove extreme outliers from the EOG artifact
+            eog_artifact(abs(eog_artifact) > threshold) = 0;
+            
+            % Remove the EOG artifact from the current EEG channel
+            clean_eeg(:, i) = eeg_data(:, i) - eog_artifact;
+        end
+    end
+end
+%}
+
+function clean_eeg = remove_eog_artifacts_regression(eeg_data, eog_channel, polynomial_order, threshold_multiplier, window_size)
+    % Perform EOG artifact removal using polynomial regression and adaptive thresholding
+    
+    % Get the number of channels and samples
+    num_channels = size(eeg_data, 2);
+    num_samples = size(eeg_data, 1);
+    
+    % Initialize the cleaned EEG data
+    clean_eeg = eeg_data;
+    
+    % Perform regression for each EEG channel
+    for i = 1:num_channels
+        if i ~= eog_channel
+            % Create the polynomial terms for regression
+            X = zeros(num_samples, polynomial_order + 1);
+            for j = 0:polynomial_order
+                X(:, j+1) = eeg_data(:, eog_channel) .^ j;
+            end
+            
+            % Perform polynomial regression between EOG channel and current EEG channel
+            beta = X \ eeg_data(:, i);
+            
+            % Estimate the EOG artifact using the polynomial regression coefficients
+            eog_artifact_poly = X * beta;
+            
+            % Remove the EOG artifact estimated by polynomial regression
+            eeg_data_poly = eeg_data(:, i) - eog_artifact_poly;
+            
+            % Perform linear regression between EOG channel and current EEG channel (after polynomial regression)
+            X_linear = [ones(num_samples, 1), eeg_data(:, eog_channel)];
+            beta_linear = X_linear \ eeg_data_poly;
+            
+            % Estimate the EOG artifact using the linear regression coefficients
+            eog_artifact_linear = X_linear * beta_linear;
+            
+            % Calculate the residual after linear regression
+            residual = eeg_data_poly - eog_artifact_linear;
+            
+            % Calculate the adaptive threshold
+            threshold = threshold_multiplier * std(residual);
+            
+            % Find the indices of values above the threshold
+            outlier_indices = find(abs(residual) > threshold);
+            
+            % Replace outliers with the mean of surrounding values
+            for k = 1:length(outlier_indices)
+                idx = outlier_indices(k);
+                start_idx = max(1, idx - window_size);
+                end_idx = min(num_samples, idx + window_size);
+                eeg_data_poly(idx) = mean(eeg_data_poly(start_idx:end_idx));
+            end
+
+            clean_eeg(:, i) = eeg_data_poly;
+
+        end
+    end
+end
