@@ -17,7 +17,7 @@ for i=1:3
     end
 end
 
-bestClassifiers=zeros(3,3); % the index of the classifier and its accuracy, test acc
+bestClassifiers=zeros(4,3); % the index of the classifier and its accuracy, test acc
 DATA = zeros(3, 20 *dataLen, numFeatures);
 for i=1:3
     DATA(i, :,:) = offline_feats{i,1}; %vertcat(offline_feats{i,1}{:});
@@ -86,8 +86,8 @@ for i = 1:k
     classifiers1{i} = fitcdiscr(cvTrainFeatures, cvTrainLabels, 'DiscrimType', 'quadratic');
     
     % Predict on validation set
-    predictedLabels = predict(classifiers1{i}, cvValidationFeatures);
-    
+    [predictedLabels, scores] = predict(classifiers1{i}, cvValidationFeatures);
+    disp(scores);
     % Compute accuracy for current fold
     cvAccuracy(i) = sum(predictedLabels == cvValidationLabels') / length(cvValidationLabels);
 end
@@ -151,6 +151,41 @@ CMS_fold_avg = mean(cvAccuracy2);
 disp(maxValue * 100)
 bestClassifiers(3, 1)=maxIndex;
 bestClassifiers(3, 2)=maxValue;
+
+%%
+cvAccuracy3 = zeros(k, 1); % Array to store cross-validation accuracy
+CMG_fold_avg=0;
+CMG_test_avg=0;
+classifiers3=cell(k,1);
+
+% Perform cross-validation to optimize classifier
+for i = 1:k
+    % Split data into training and validation sets for current fold
+    other_indices = setdiff(1:size(DATA, 1), i);
+
+    cvTrainFeatures = vertcat(DATA(other_indices, :, :));
+    cvTrainFeatures = reshape(train, [], numFeatures);
+    cvTrainLabels = vertcat(FEATUREL(other_indices, :, :));
+    cvTrainLabels = reshape(cvTrainLabels', [], 1);
+    cvValidationFeatures = squeeze(DATA(i, :, :));
+    cvValidationLabels = squeeze(FEATUREL(i, :));
+    
+    % Train quadratic LDA classifier
+    classifiers3{i} = fitckernel(cvTrainFeatures, cvTrainLabels);
+    
+    % Predict on validation set
+    predictedLabels = predict(classifiers3{i}, cvValidationFeatures);
+    
+    % Compute accuracy for current fold
+    cvAccuracy3(i) = sum(predictedLabels == cvValidationLabels') / length(cvValidationLabels);
+end
+
+% Average accuracy across folds to find optimal parameters
+CMG_fold_avg = mean(cvAccuracy3);
+[maxValue, maxIndex] = max(cvAccuracy3);
+disp(maxValue * 100)
+bestClassifiers(4, 1)=maxIndex;
+bestClassifiers(4, 2)=maxValue;
 
 
 %% final classification on all offline data
