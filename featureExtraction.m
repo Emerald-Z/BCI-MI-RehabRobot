@@ -66,7 +66,8 @@ for i=1:3
         %    feats_used(sorted_indices(ind)) = feats_used(sorted_indices(i)) + 1;
         %end
         %disp(size(featureMatrix(:, sorted_indices(1:4))));
-        feats{j} = model_input_feats(:, 1:4);
+        size(model_input_feats)
+        feats{j} = model_input_feats(:, 1:3);
         featsR{j} = featureMatrix(:, sorted_indices(1:4));
         feats_fixed{j} = new_feats(:, feat_indices);
         %avg_coeffs = avg_coeffs + coeff;

@@ -15,6 +15,7 @@ for i=1:3
         window_size = 2.2;
         fs = 512;
         label = runs.labels{i}(j);
+
         overlap = 0.68;
         
         [MAV, VAR, RMS, WL, ZC, SSC, AR, labels] = extract_features(window_size, overlap, fs, filteredSignal, label);
@@ -71,10 +72,10 @@ for i=1:4
         filteredSignal = session2.eeg{i}{j};
         window_size = 2.2;
         fs = 512;
-        label = session2.labels.type{i, 1}(j);
+        label = session2.labels.type{1, i}(j);
         overlap = 0.68;
         % sustain trial
-        if session2.labels.sustain{i, 1}(j) == 0
+        if session2.labels.sustain{1, i}(j) == 0
             filteredSignal = filteredSignal;
         else
             filteredSignal = filteredSignal(1:3584); % 7s * 512
