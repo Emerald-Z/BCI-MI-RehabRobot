@@ -211,7 +211,6 @@ trainFeatures = reshape(DATA, [], numFeatures);
 %final_model = fitcecoc(trainFeatures, trainLabels, 'Learners', t, 'Coding', 'onevsone');
 final_model = fitcdiscr(trainFeatures, trainLabels, 'DiscrimType', 'quadratic');
 
-
 %% assess on session 2, 3 
 % session 2
 finalCVaccuracy = zeros(2, 1);
@@ -249,6 +248,23 @@ disp(scores)
 
 % Compute accuracy for current fold
 finalCVAccuracy(1) = sum(predictedLabels == validationLabels) / length(validationLabels)
+
+%% AUC 
+[X,Y,T,AUC] = perfcurve(validationLabels-1, predictedLabels-1, 1);
+% perfcurve() calculates the true positive rate (X), false positive rate (Y), thresholds (T), and AUC
+
+% Plot ROC curve
+plot(X,Y)
+xlabel('False Positive Rate')
+ylabel('True Positive Rate')
+title('Receiver Operating Characteristic (ROC) Curve')
+grid on
+
+% hold on
+% fill(X, Y, 'b', 'FaceAlpha', 0.2) % Fill area under the curve with blue and 20% opacity
+
+% Display AUC
+fprintf('Area Under the Curve (AUC): %.4f\n', AUC);
 
 % session 3
 online = Subject1.online.session3;
