@@ -57,19 +57,27 @@ for i=1:3
 end
 
 online_feats = cell(4,1);
+online_labels = cell(4,1);
 for i=1:4
     feats = cell(20, 1);
+    ol = cell(20,1);
     featureMatrix = [];
 
     for j=1:20
         filteredSignal = session2.eeg{i}{j};
         window_size = 0.2;
         fs = 512;
-        label = session2.labels.type{i}(j);
+        label = session2.labels.type{i, 1}(j);
         overlap = 0.75;
-        
+        % sustain trial
+        if session2.labels.sustain{i, 1}(j) == 0
+            filteredSignal = filteredSignal;
+        else
+            filteredSignal = filteredSignal(1:3584); % 7s * 512
+        end
         [MAV, VAR, RMS, WL, ZC, SSC, AR, labels] = extract_features(window_size, overlap, fs, filteredSignal, label);
-        disp(size(labels))
+        disp(length(labels))
+        ol{j} = ones(length(labels), 1) * label;
         % Combine features into a matrix
         temp = [MAV; VAR; RMS; WL; ZC; SSC; AR]';
         featureMatrix = [featureMatrix; temp];
@@ -99,4 +107,5 @@ for i=1:4
     end
     
     online_feats{i} = featureMatrix;
+    online_labels{i} = ol;
 end

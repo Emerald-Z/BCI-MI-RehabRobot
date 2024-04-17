@@ -199,20 +199,27 @@ final_model = fitcecoc(trainFeatures, trainLabels, 'Learners', t, 'Coding', 'one
 
 
 %% assess on session 2, 3 
+% session 2
 finalCVaccuracy = zeros(2, 1);
 online = Subject1.online.session2;
 dataLen = 69;
 online_k = 4;
-TESTFEATUREL=zeros(online_k, 2796);
+TESTFEATUREL=zeros(4, 2339);
 for i=1:online_k
+    prev = 1;
     for j=1:20
-        TESTFEATUREL(i, (j-1)* dataLen + 1 : j* dataLen) = online.labels.type{i, 1}(j,1) * ones(dataLen, 1);
+        right = prev + length(online_labels{i, 1}{j, 1}) - 1;
+        if right > 2339
+            right = 2339;
+        end
+        TESTFEATUREL(i, prev : right) = online_labels{i, 1}{j, 1}(1: right - prev + 1);
+        prev = prev + length(online_labels{i, 1}{j, 1}) ;
     end
 end
 
-TESTDATA = zeros(online_k, 2794, numFeatures);
+TESTDATA = zeros(online_k, 2339, numFeatures);
 for i=1:online_k
-    TESTDATA(i, :,:) = online_feats{i,1}(1:2794, :); %vertcat(offline_feats{i,1}{:});
+    TESTDATA(i, :,:) = online_feats{i,1}(1:2339, :); %vertcat(offline_feats{i,1}{:});
 end
 
 validationLabels = reshape(TESTFEATUREL, [], 1);
@@ -220,4 +227,34 @@ validationFeatures = reshape(TESTDATA, [], numFeatures);
 predictedLabels = predict(final_model, validationFeatures);
 
 % Compute accuracy for current fold
-finalCVAccuracy(1) = sum(predictedLabels == validationLabels(1:11176)) / length(validationLabels);
+finalCVAccuracy(1) = sum(predictedLabels == validationLabels) / length(validationLabels)
+
+% session 3
+finalCVaccuracy = zeros(2, 1);
+online = Subject1.online.session3;
+dataLen = 69;
+online_k = 4;
+TESTFEATUREL=zeros(4, 2339);
+for i=1:online_k
+    prev = 1;
+    for j=1:20
+        right = prev + length(online_labels{i, 1}{j, 1}) - 1;
+        if right > 2339
+            right = 2339;
+        end
+        TESTFEATUREL(i, prev : right) = online_labels{i, 1}{j, 1}(1: right - prev + 1);
+        prev = prev + length(online_labels{i, 1}{j, 1}) ;
+    end
+end
+
+TESTDATA = zeros(online_k, 2339, numFeatures);
+for i=1:online_k
+    TESTDATA(i, :,:) = online_feats{i,1}(1:2339, :); %vertcat(offline_feats{i,1}{:});
+end
+
+validationLabels = reshape(TESTFEATUREL, [], 1);
+validationFeatures = reshape(TESTDATA, [], numFeatures);
+predictedLabels = predict(final_model, validationFeatures);
+
+% Compute accuracy for current fold
+finalCVAccuracy(1) = sum(predictedLabels == validationLabels) / length(validationLabels)
