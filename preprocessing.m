@@ -597,10 +597,10 @@ grid on;
 eval([subject_id ' = struct(''offline'', offline, ''online'', online);']);
 
 %% Functions
-function threshold = calculate_eog_threshold(eog_data, multiplier)
-    eog_channel = 32;
-    threshold = multiplier * std(eog_data(:, eog_channel));
-end
+% function threshold = calculate_eog_threshold(eog_data, multiplier)
+%     eog_channel = 32;
+%     threshold = multiplier * std(eog_data(:, eog_channel));
+% end
 
 %{
 function clean_eeg = remove_eog_artifacts_regression(eeg_data, eog_channel)
@@ -700,60 +700,60 @@ function clean_eeg = remove_eog_artifacts_regression(eeg_data, eog_channel, poly
 end
 %}
 
-function clean_eeg = remove_eog_artifacts_regression(eeg_data, eog_channel, polynomial_order, threshold_multiplier, window_size)
-    % Perform EOG artifact removal using polynomial regression and adaptive thresholding
-    
-    % Get the number of channels and samples
-    num_channels = size(eeg_data, 2);
-    num_samples = size(eeg_data, 1);
-    
-    % Initialize the cleaned EEG data
-    clean_eeg = eeg_data;
-    
-    % Perform regression for each EEG channel
-    for i = 1:num_channels
-        if i ~= eog_channel
-            % Create the polynomial terms for regression
-            X = zeros(num_samples, polynomial_order + 1);
-            for j = 0:polynomial_order
-                X(:, j+1) = eeg_data(:, eog_channel) .^ j;
-            end
-            
-            % Perform polynomial regression between EOG channel and current EEG channel
-            beta = X \ eeg_data(:, i);
-            
-            % Estimate the EOG artifact using the polynomial regression coefficients
-            eog_artifact_poly = X * beta;
-            
-            % Remove the EOG artifact estimated by polynomial regression
-            eeg_data_poly = eeg_data(:, i) - eog_artifact_poly;
-            
-            % Perform linear regression between EOG channel and current EEG channel (after polynomial regression)
-            X_linear = [ones(num_samples, 1), eeg_data(:, eog_channel)];
-            beta_linear = X_linear \ eeg_data_poly;
-            
-            % Estimate the EOG artifact using the linear regression coefficients
-            eog_artifact_linear = X_linear * beta_linear;
-            
-            % Calculate the residual after linear regression
-            residual = eeg_data_poly - eog_artifact_linear;
-            
-            % Calculate the adaptive threshold
-            threshold = threshold_multiplier * std(residual);
-            
-            % Find the indices of values above the threshold
-            outlier_indices = find(abs(residual) > threshold);
-            
-            % Replace outliers with the mean of surrounding values
-            for k = 1:length(outlier_indices)
-                idx = outlier_indices(k);
-                start_idx = max(1, idx - window_size);
-                end_idx = min(num_samples, idx + window_size);
-                eeg_data_poly(idx) = mean(eeg_data_poly(start_idx:end_idx));
-            end
-
-            clean_eeg(:, i) = eeg_data_poly;
-
-        end
-    end
-end
+% function clean_eeg = remove_eog_artifacts_regression(eeg_data, eog_channel, polynomial_order, threshold_multiplier, window_size)
+%     % Perform EOG artifact removal using polynomial regression and adaptive thresholding
+% 
+%     % Get the number of channels and samples
+%     num_channels = size(eeg_data, 2);
+%     num_samples = size(eeg_data, 1);
+% 
+%     % Initialize the cleaned EEG data
+%     clean_eeg = eeg_data;
+% 
+%     % Perform regression for each EEG channel
+%     for i = 1:num_channels
+%         if i ~= eog_channel
+%             % Create the polynomial terms for regression
+%             X = zeros(num_samples, polynomial_order + 1);
+%             for j = 0:polynomial_order
+%                 X(:, j+1) = eeg_data(:, eog_channel) .^ j;
+%             end
+% 
+%             % Perform polynomial regression between EOG channel and current EEG channel
+%             beta = X \ eeg_data(:, i);
+% 
+%             % Estimate the EOG artifact using the polynomial regression coefficients
+%             eog_artifact_poly = X * beta;
+% 
+%             % Remove the EOG artifact estimated by polynomial regression
+%             eeg_data_poly = eeg_data(:, i) - eog_artifact_poly;
+% 
+%             % Perform linear regression between EOG channel and current EEG channel (after polynomial regression)
+%             X_linear = [ones(num_samples, 1), eeg_data(:, eog_channel)];
+%             beta_linear = X_linear \ eeg_data_poly;
+% 
+%             % Estimate the EOG artifact using the linear regression coefficients
+%             eog_artifact_linear = X_linear * beta_linear;
+% 
+%             % Calculate the residual after linear regression
+%             residual = eeg_data_poly - eog_artifact_linear;
+% 
+%             % Calculate the adaptive threshold
+%             threshold = threshold_multiplier * std(residual);
+% 
+%             % Find the indices of values above the threshold
+%             outlier_indices = find(abs(residual) > threshold);
+% 
+%             % Replace outliers with the mean of surrounding values
+%             for k = 1:length(outlier_indices)
+%                 idx = outlier_indices(k);
+%                 start_idx = max(1, idx - window_size);
+%                 end_idx = min(num_samples, idx + window_size);
+%                 eeg_data_poly(idx) = mean(eeg_data_poly(start_idx:end_idx));
+%             end
+% 
+%             clean_eeg(:, i) = eeg_data_poly;
+% 
+%         end
+%     end
+% end
