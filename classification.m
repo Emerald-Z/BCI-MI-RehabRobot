@@ -276,4 +276,4 @@ validationFeatures = reshape(TESTDATA, [], numFeatures);
 predictedLabels = predict(final_model, validationFeatures);
 
 % Compute accuracy for current fold
-finalCVAccuracy(2) = sum(predictedLabels == validationLabels) / length(validationLabels)
+finalCVAccuracy(2) = sum(predictedLabels == validationLabels) / length(validationLabels);

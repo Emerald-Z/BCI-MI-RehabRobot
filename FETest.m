@@ -78,7 +78,9 @@ for i=1:4
         if session2.labels.sustain{1, i}(j) == 0
             filteredSignal = filteredSignal;
         else
-            filteredSignal = filteredSignal(1:3584); % 7s * 512
+            % find where sustain starts
+            sustainStart = session2.labels.sustain_idx{i, 1}(j);
+            filteredSignal = filteredSignal(1:sustainStart); % where sustain starts
         end
         [MAV, VAR, RMS, WL, ZC, SSC, AR, labels] = extract_features(window_size, overlap, fs, filteredSignal, label);
         disp(length(labels))
