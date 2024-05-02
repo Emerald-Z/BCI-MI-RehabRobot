@@ -1,7 +1,7 @@
 %% call extract features
 %do for all signals being processed -- go trial by trial
 %runs.eeg{1}{j} <-- 1 = run #, j = sample number
-runs = Subject1.offline.runs;
+runs = Subject3.offline.runs;
 offline_feats = cell(3,1);
 offline_labels = cell(3,1);
 window_size = 1.2;
@@ -18,12 +18,12 @@ for i=1:3
         label = runs.labels{i}(j);
 
         
-        [MAV, VAR, RMS, WL, ZC, SSC, AR, labels] = extract_features(window_size, overlap, fs, filteredSignal, label);
+        [MAV, VAR, RMS, WL, ZC, SSC, AR, EN, FRAC, CWT, labels] = extract_features(window_size, overlap, fs, filteredSignal, label);
         of{j} = ones(length(labels), 1) * label;
         
         %implement PCA
         % Combine features into a matrix
-        temp = [MAV; VAR; ZC; SSC; AR]';
+        temp = [MAV; VAR; SSC; ZC; AR; EN]';
         temp = zscore(temp);
         featureMatrix = [featureMatrix; temp];
         
