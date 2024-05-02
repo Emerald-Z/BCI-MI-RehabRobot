@@ -93,9 +93,10 @@ end
 %disp(feats_used)
 %disp(avg_coeffs)
 %disp(size(offline_feats))
+%% 
+online_feats = cell(3,1);
 
 for i=1:4
-    online_feats = cell(3,1);
     for  j=1:20
         feats = cell(20, 1);
         feats_fixed = cell(20,1);
@@ -107,17 +108,17 @@ for i=1:4
 
 
         
-        [MAV, VAR, RMS, WL, ZC, SSC, AR, labels] = extract_avg_features(window_size, overlap, fs, filteredSignal, label);
+        [MAV, VAR, RMS, WL, ZC, SSC, AR,  EN, FRAC, GFP, GD, labels] = extract_avg_features(window_size, overlap, fs, filteredSignal, label);
         
         %implement PCA
         % Combine features into a matrix
-        featureMatrix = [MAV; VAR; RMS; WL; ZC; SSC; AR]';
+        featureMatrix = [MAV; VAR; RMS; WL; ZC; SSC; AR; EN; FRAC; GFP]';
         
         % Standardize features
         featureMatrix = zscore(featureMatrix);
         
         % Perform PCA
-        [coeff, score, latent, tsquared, explained] = pca(featureMatrix);
+        %[coeff, score, latent, tsquared, explained] = pca(featureMatrix);
 
         X_centered = bsxfun(@minus, featureMatrix, avg_mean); 
         new_feats = X_centered * avg_coeffs;
@@ -130,13 +131,15 @@ for i=1:4
         % title('Explained Variance by PCA Components');
         
         % Choose components that explain, e.g., at least 95% of the variance
-        cumVar = cumsum(explained);
+        %cumVar = cumsum(explained);
         %numComponents = find(cumVar >= 95, 1, 'first');
-        model_input_feats = score(:, 1:4);
-        [sortedLoadings, featureIdx] = sort(abs(coeff(:,1)), 'descend');
+        %model_input_feats = score(:, 1:4);
+        %[sortedLoadings, featureIdx] = sort(abs(coeff(:,1)), 'descend');
         %disp(size(model_input_feats))
-        feats{j} = model_input_feats;
+        %feats{j} = model_input_feats;
         feats_fixed{j} = new_feats(:, feat_indices);
     end
     online_feats{i} = feats_fixed;
 end
+
+disp("FREE")

@@ -93,6 +93,8 @@ end
 %disp(feats_used)
 %disp(avg_coeffs)
 %disp(size(offline_feats))
+%% 
+
 
 for i=1:4
     online_feats = cell(3,1);
@@ -140,3 +142,5 @@ for i=1:4
     end
     online_feats{i} = feats_fixed;
 end
+
+disp("FREE")
