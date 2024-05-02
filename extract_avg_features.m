@@ -1,6 +1,6 @@
 function [avg_MAV_feature, avg_VAR_feature, ...
     avg_RMS_feature, avg_WL_feature, avg_ZC_feature, ...
-        avg_SSC_feature, avg_AR_feature, featureLabels] = extract_avg_features(window_size, overlap, fs, filteredSignal, label)
+        avg_SSC_feature, avg_AR_feature,  avg_EN_feature, avg_FRAC_feature, avg_GFP_feature, avg_GD_feature, featureLabels] = extract_avg_features(window_size, overlap, fs, filteredSignal, label)
     
     WSize = floor(window_size*fs);	    % length of each data frame, 30ms
     nOlap = floor(overlap*WSize);  % overlap of successive frames, half of WSize
@@ -9,7 +9,7 @@ function [avg_MAV_feature, avg_VAR_feature, ...
     len = fix((nx - (WSize-hop))/hop);    %length of output vector = total frames
     
     [avg_MAV_feature, avg_VAR_feature, avg_RMS_feature, avg_WL_feature, avg_ZC_feature, ...
-        avg_SSC_feature, avg_AR_feature, avg_EN_feature, avg_PSD_feature, avg_FRAC_feature, avg_GFP_feature, avg_GD_feature, featureLabels] = deal(zeros(1,len * 10));
+        avg_SSC_feature, avg_AR_feature, avg_EN_feature, avg_FRAC_feature, avg_GFP_feature, avg_GD_feature, featureLabels] = deal(zeros(1,len * 10));
     disp("AVERAGE FEATURES!")
     disp(size(filteredSignal))
     %disp(size(avg_segments))

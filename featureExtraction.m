@@ -25,7 +25,7 @@ for i=1:3
         label = runs.labels{i}(j);
         overlap = 0.75;
         
-        [MAV, VAR, RMS, WL, ZC, SSC, AR, labels] = extract_avg_features(window_size, overlap, fs, filteredSignal, label);
+        [MAV, VAR, RMS, WL, ZC, SSC, AR,  EN, FRAC, GFP, GD, labels] = extract_avg_features(window_size, overlap, fs, filteredSignal, label);
         
         %implement PCA
         % Combine features into a matrix
