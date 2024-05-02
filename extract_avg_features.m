@@ -9,9 +9,9 @@ function [avg_MAV_feature, avg_VAR_feature, ...
     len = fix((nx - (WSize-hop))/hop);    %length of output vector = total frames
     
     [avg_MAV_feature, avg_VAR_feature, avg_RMS_feature, avg_WL_feature, avg_ZC_feature, ...
-        avg_SSC_feature, avg_AR_feature, avg_EN_feature, avg_FRAC_feature, avg_GFP_feature, avg_GD_feature, featureLabels] = deal(zeros(1,len * 10));
-    disp("AVERAGE FEATURES!")
-    disp(size(filteredSignal))
+        avg_SSC_feature, avg_AR_feature, avg_EN_feature, avg_FRAC_feature, avg_GFP_feature, avg_GD_feature, avg_CWT_feature, featureLabels] = deal(zeros(1,len * 10));
+    %disp("AVERAGE FEATURES!")
+    %disp(size(filteredSignal))
     %disp(size(avg_segments))
 
     avg_segments = cell(1, len*10);
@@ -19,10 +19,10 @@ function [avg_MAV_feature, avg_VAR_feature, ...
         avg_segments{i} = zeros(WSize, 1);
     end
 
-    disp(size(avg_segments))
-    disp("SIZE")
-    disp(size(avg_MAV_feature))
-    disp(len*10)
+    %disp(size(avg_segments))
+    %disp("SIZE")
+    %disp(size(avg_MAV_feature))
+    %disp(len*10)
 
     for channel=1:10
         %fix channel signal here too :/
@@ -42,10 +42,10 @@ function [avg_MAV_feature, avg_VAR_feature, ...
                 %disp("BRUH")
                 %disp(size(segment))
                 %disp(size(avg_segments{idx}))
-                disp(idx)
-                disp(i)
-                disp(j)
-                disp(channel)
+                %disp(idx)
+                %disp(i)
+                %disp(j)
+                %disp(channel)
                 %avg_MAV_feature(idx) = 0;
                 avg_segments{idx} = avg_segments{idx} + segment;
                 %end
@@ -58,7 +58,7 @@ function [avg_MAV_feature, avg_VAR_feature, ...
     for i = 1:numel(avg_segments)
         avg_segments{i} = avg_segments{i} / 10;
     end
-    disp(size(avg_segments))
+    %disp(size(avg_segments))
 
     for seg_idx = 1:len*10
         % Extract the segment data for the current segment
@@ -81,7 +81,7 @@ function [avg_MAV_feature, avg_VAR_feature, ...
 
     for channel=1:10
         %TODO: fix how I am getting the channel's signal here -- something is wrong :/
-        disp(channel)
+        %disp(channel)
         channel_signal = filteredSignal(:, channel);
         [MAV_feature, VAR_feature,RMS_feature, WL_feature, ZC_feature, SSC_feature, AR_feature, EN_feature, FRAC_feature, CWT_feature, segments, featureLabels] = extract_features(window_size, overlap, fs, channel_signal, label);
         avg_MAV_feature = avg_MAV_feature + MAV_feature;

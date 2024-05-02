@@ -19,9 +19,9 @@ function [MAV_feature, VAR_feature, ...
     scales = 1:128; % Define scales for the CWT
     
     for i = 1:len
-        for j = 1:10
-            segment = filteredSignal(((i-1)*hop+1):((i-1)*hop+WSize), j);
-            idx = (i-1) * 10 + j;
+        %for j = 1:10
+            segment = filteredSignal(((i-1)*hop+1):((i-1)*hop+WSize));
+            idx = i;
             % PSD_feature(i) = pwelch(segment, length(segment), 0, [12 30]);
 
             %segments(idx) = segment;
@@ -161,7 +161,7 @@ function [MAV_feature, VAR_feature, ...
             CWT_feature(idx) = max(cwtMagnitude);
     
             featureLabels(i) = sum(arrayfun(@(t) ((i-1)*hop+1) >= Rise1(t) && ((i-1)*hop+WSize) <= Fall1(t), 1:length(Rise1)));
-        end
+        %end
 
     end
 
