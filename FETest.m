@@ -1,9 +1,11 @@
 %% call extract features
 %do for all signals being processed -- go trial by trial
 %runs.eeg{1}{j} <-- 1 = run #, j = sample number
-runs = Subject1.offline.runs;
+runs = Subject3.offline.runs;
 offline_feats = cell(3,1);
 offline_labels = cell(3,1);
+window_size = 1.2;
+overlap = 0.68;
 
 for i=1:3
     feats = cell(20, 1);
@@ -12,18 +14,17 @@ for i=1:3
     of = cell(20, 1);
     for j=1:20
         filteredSignal = runs.eeg{i}{j};
-        window_size = 2.2;
         fs = 512;
         label = runs.labels{i}(j);
 
-        overlap = 0.68;
         
-        [MAV, VAR, RMS, WL, ZC, SSC, AR, labels] = extract_features(window_size, overlap, fs, filteredSignal, label);
+        [MAV, VAR, RMS, WL, ZC, SSC, AR, EN, FRAC, CWT, labels] = extract_features(window_size, overlap, fs, filteredSignal, label);
         of{j} = ones(length(labels), 1) * label;
-
+        
         %implement PCA
         % Combine features into a matrix
-        temp = [MAV; VAR; RMS; WL; ZC; SSC; AR]';
+        temp = [MAV; VAR; SSC; ZC; AR; EN]';
+        temp = zscore(temp);
         featureMatrix = [featureMatrix; temp];
         
         % Standardize features
@@ -71,10 +72,8 @@ for i=1:4
 
     for j=1:20
         filteredSignal = session2.eeg{i}{j};
-        window_size = 2.2;
         fs = 512;
         label = session2.labels.type{1, i}(j);
-        overlap = 0.68;
         % sustain trial
         if session2.labels.sustain{1, i}(j) == 0
             filteredSignal = filteredSignal;
@@ -87,14 +86,15 @@ for i=1:4
         disp(length(labels))
         ol{j} = ones(length(labels), 1) * label;
         % Combine features into a matrix
-        temp = [MAV; VAR; RMS; WL; ZC; SSC; AR]';
+        temp = [MAV; VAR; WL; SSC; AR]';
+        temp = zscore(temp);
+
         featureMatrix = [featureMatrix; temp];
         %implement PCA
         % Combine features into a matrix
         % featureMatrix = [MAV; VAR; RMS; WL; ZC; SSC; AR]';
         % 
         % % Standardize features
-        % featureMatrix = zscore(featureMatrix);
         % 
         % % Perform PCA
         % [coeff, score, latent, tsquared, explained] = pca(featureMatrix);

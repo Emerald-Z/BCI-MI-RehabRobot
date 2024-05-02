@@ -1,4 +1,17 @@
+%% NOTES
+% For good data for the report, make sure the PSD calculation for single
+% channel is using a reach trial, not a rest trial.
+
+% Make sure to do all subjects.
+
+% 
+
+
+
+
+
 %% epoching is done here too
+
 
 %% offline sesion
 
@@ -14,12 +27,20 @@ Wp = [fc1 fc2]/(fs/2);
 
 
 % Specify which subject we're running on 
-current_subject = 1;
+current_subject = 3;
 subject_id = sprintf('Subject%d', current_subject);  % Dynamic subject ID based on current_subject
-% How many runs per online session?
-session2_run_num = 4; % Subj1: 4, Subj2: 3,
-session3_run_num = 6; % Subj1: 6, Subj2: 6,
 
+% How many runs per online session?
+if current_subject == 1
+    session2_run_num = 4;
+    session3_run_num = 6;
+elseif current_subject == 2
+    session2_run_num = 3;
+    session3_run_num = 6;
+else 
+    session2_run_num = 5;
+    session3_run_num = 7;
+end
 % Build a Butterworth bandpass filter of 4th order
 % check the "butter" function in matlab
 %N=4;
@@ -310,11 +331,16 @@ for i = 1:length(non_eog_channels)
     
     for j = 1:3
         % Initialize an empty cell array to store task data for each trial within the run
-        task_data_trials = cell(length(offline.runs.eeg{j}), 1);
+
+        % Only take reach trials
+        reach_trials = arrayfun(@(x) offline.runs.eeg{j}{x}, ...
+                       find(offline.runs.labels{j} == 2), 'UniformOutput', false);
+        task_data_trials = cell(length(reach_trials), 1);
+
         
-        for k = 1:length(offline.runs.eeg{j})
+        for k = 1:length(reach_trials)
             % Store task data for each trial within the run
-            task_data_trials{k} = offline.runs.eeg{j}{k}(:, non_eog_channels(i));
+            task_data_trials{k} = reach_trials{k}(:, non_eog_channels(i));
         end
         
         % Average task data across trials within the run
@@ -345,7 +371,7 @@ figure;
 bar(fisher_scores(selected_channels));
 xlabel('Selected Channel');
 ylabel('Fisher Score');
-title('Top 10 Fisher Scores and Associated Channels');
+title(sprintf('Top 10 Fisher Scores and Associated Channels (Subj %d)', current_subject));
 xticks(1:N);
 xticklabels(selected_channel_labels);
 xtickangle(45);
@@ -361,14 +387,35 @@ figure;
 % Set the values of selected channels to their respective Fisher scores
 topoplot_data = fisher_scores;
 
-chanloc = readlocs(run.header);
+run.header.ELEC.labels = string(run.header.Label);
+isstring(run.header.ELEC.labels)
+%%
+%correct_channels = setdiff(1:71, [13, 14, 18, 19, 54, 57, 65:71]);
+correct_channels = setdiff(1:71, [32, 65:71]);
+correct_channel_labels = run.header.Label(correct_channels);
+%%
+chanloc = readlocs('BioSemi64.loc');
 
-topoplot(topoplot_data, chanloc, 'electrodes', 'labelpoint', 'maplimits', 'minmax');
+topoplot([], chanloc, 'electrodes', 'labelpoint', 'maplimits', 'minmax');
+%figure;
+%topoplot(topoplot_data, chanloc, 'electrodes', 'labelpoint', 'maplimits', 'minmax');
 
 colorbar;
 title('Fisher Scores of Selected Channels'); 
 %}
 
+%%
+% Adjust selected labels
+selected_channels_adjusted = selected_channels;
+
+% Loop through each element in the cell array
+for i = 1:length(selected_channels_adjusted)
+    % Check if the element in the cell is greater than x
+    if selected_channels_adjusted(i) > 27
+        % Subtract 1 from the element
+        selected_channels_adjusted(i) = selected_channels_adjusted(i) + 1;
+    end
+end
 %% PSD
 
 % Do psd on just the most discrimiable channels? right now there's no good
@@ -407,19 +454,19 @@ num_channels = size(selected_channels, 1);  % Total number of channels
 %num_channels = size(non_eog_channels, 2);  % Total number of channels
 
 
-%{
+
 % Calculate average PSD for resting state across all channels
 for ch = non_eog_channels
     rest_avg = mean(offline.rest{1}(:, ch), 2);
     [psd_ch, freq_rest] = pwelch(rest_avg, window, noverlap, nfft, fs);
     psd_rest_total = psd_rest_total + psd_ch;
 end
-%}
 
 
+%{
 % Calculate average PSD for "rest" task state across all channels
 for ch = non_eog_channels
-    for run_idx = 1:runs
+    for run_idx = 1:3
         run_samples = arrayfun(@(x) offline.runs.eeg{run_idx}{x}(1:min_samples(run_idx)-1, ch), ...
                                find(offline.runs.labels{run_idx} == 1), 'UniformOutput', false);  % Only rest trials
         if ~isempty(run_samples)
@@ -430,11 +477,11 @@ for ch = non_eog_channels
         end
     end
 end
-
+%}
 
 % Calculate average PSD for "reach" task state across all channels
 for ch = non_eog_channels
-    for run_idx = 1:runs
+    for run_idx = 1:3
         run_samples = arrayfun(@(x) offline.runs.eeg{run_idx}{x}(1:min_samples(run_idx)-1, ch), ...
                                find(offline.runs.labels{run_idx} == 2), 'UniformOutput', false);  % Only reach trials
         if ~isempty(run_samples)
@@ -458,20 +505,59 @@ psd_diff_db = psd_run_db - psd_rest_db;
 
 % Plot Comparison
 figure;
-plot(freq_run, abs(psd_diff_db), 'k', 'LineWidth', 2);
+plot(freq_run, abs(psd_diff_db), 'k', 'LineWidth', 1, 'Color', [0 0 0 0.3]);  % Set opacity to 0.5
 hold on;
-plot(freq_run, psd_run_db, 'r', 'LineWidth', 2);
-plot(freq_run, psd_rest_db, 'b', 'LineWidth', 2);
+plot(freq_run, psd_run_db, 'r', 'LineWidth', 1);
+plot(freq_run, psd_rest_db, 'b', 'LineWidth', 1);
 xlabel('Frequency (Hz)');
-ylabel('PSD Difference (dB/Hz)');
-title('PSD Difference: Reach Task vs Resting State');
+ylabel('PSD (dB/Hz)');
+title(sprintf('Offline Reach Task PSD vs Offline Open-Eye Resting State PSD (Subj %d)', current_subject));
 grid on;
 %legend('Difference', 'Reach', 'Rest');
-legend('Reach', 'Rest');
+legend('Difference', 'Reach', 'Rest');
 grid on;
-xlim([0 50]);  % Limit frequency axis if needed
+xlim([0 100]);  % Limit frequency axis if needed
 
 disp(sprintf("PSD calculated"));
+
+
+%% PSD Rest vs Most Discriminable Channel
+
+% EDIT THIS based on whether its a reach trial !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+% Sub 1: 2
+% Sub 2: 2
+% Sub 3: 1
+trial_to_analyze = 1;
+
+
+% Calculate average PSD for resting state for most discriminable channel
+[psd_ch_rest, freq_rest] = pwelch(offline.rest{1, 1}(:, selected_channels_adjusted(1)), window, noverlap, nfft, fs);
+
+% Calculate average PSD for "reach" task state for most discriminable channels
+[psd_ch_run, freq_run] = pwelch(offline.runs.eeg{1, 1}{trial_to_analyze, 1}(:, selected_channels_adjusted(1)), window, noverlap, nfft, fs);
+
+
+% Convert to dB
+psd_rest_db = 10 * log10(psd_ch_rest);
+psd_run_db = 10 * log10(psd_ch_run);
+
+% Calculate PSD Difference
+psd_diff_db = psd_run_db - psd_rest_db;
+
+% Plot Comparison
+figure;
+plot(freq_run, abs(psd_diff_db), 'k', 'LineWidth', 1, 'Color', [0 0 0 0.3]);  % Set opacity to 0.3
+hold on;
+plot(freq_run, psd_run_db, 'r', 'LineWidth', 1);
+plot(freq_run, psd_rest_db, 'b', 'LineWidth', 1);
+xlabel('Frequency (Hz)');
+ylabel('PSD (dB/Hz)');
+title(sprintf('Offline Reach Task PSD vs Offline Open-Eye Resting State PSD (Most Discr. Channel) (Subj %d)', current_subject));
+grid on;
+%legend('Difference', 'Reach', 'Rest');
+legend('Difference', 'Reach', 'Rest');
+grid on;
+xlim([0 100]);  % Limit frequency axis if needed
 
 %% Bandpass Filtering
 
@@ -487,9 +573,9 @@ d = designfilt('bandpassiir', 'FilterOrder', 4, 'HalfPowerFrequency1', fc1, 'Hal
 
 % Plot filtered data for each selected channel
 figure;
-for i = 2
+for i = 1
     %subplot(4, 3, i);
-    channel_idx = selected_channels(i);
+    channel_idx = selected_channels_adjusted(i);
     % Get the data for the selected channel
     channel_data = offline.runs.eeg{1}{1}(:, channel_idx);
     
@@ -503,11 +589,11 @@ for i = 2
     if mod(i, 3) == 1
         ylabel('Amplitude');
     end
-    title(sprintf('Channel %d', channel_idx));
+    %title(sprintf('Channel %d', channel_idx));
     grid on;
 end
 legend('Before Bandpass', 'After Bandpass');
-annotation('textbox', [0.35, 0.95, 0.3, 0.05], 'String', 'Bandpass Filtering', 'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', 'HorizontalAlignment', 'center');
+title(sprintf('Effect of Bandpass Filter [%d %d Hz] on Most Discriminable Channel %s (Subj %d)', fc1, fc2, selected_channel_labels{1}, current_subject));
 
 % Apply the filter to offline and online data
 offline.rest = cellfun(@(x) filtfilt(d, x), offline.rest, 'UniformOutput', false);
@@ -540,11 +626,11 @@ end
 
 % Plot the EOG data
 figure;
-plot(time_vector, eog_data_to_plot);
+%plot(time_vector, eog_data_to_plot);
 hold on;
 grid on;
 
-channel_to_plot = selected_channels(1);
+channel_to_plot = selected_channels_adjusted(1);
 % Select the data for plotting (rest)
 if size(offline.rest{1}, 1) >= samples_to_plot
     data_to_plot = offline.rest{1}(1:samples_to_plot, channel_to_plot);
@@ -553,23 +639,51 @@ else
 end
 
 % Plot the channel data
-plot(time_vector, data_to_plot);
-xlabel('Time (seconds)');
-ylabel('Amplitude (\muV)');  % Adjust the units based on your data
-title(sprintf('EOG Channel BEFORE EOG FILTER', eog_channel));
-legend('EOG', 'Channel');
-hold off;
+plot(time_vector, data_to_plot, 'r', 'LineWidth', 1);
+%xlabel('Time (seconds)');
+%ylabel('Amplitude (\muV)');  % Adjust the units based on your data
+%title(sprintf('EOG Channel BEFORE EOG FILTER', eog_channel));
+%legend('EOG', 'Channel');
+%hold off;
 
 
 % Remove EOG artifacts using polynomial regression followed by adaptive thresholding
 polynomial_order = 3; % Specify the desired polynomial order
 threshold_multiplier = 2.5; % Specify the desired threshold multiplier
 window_size = 10; % Specify the window size for calculating the mean of surrounding values
+
+eog_channel = 28;  % Adjust the EOG channel index if necessary
+
 offline.rest = cellfun(@(x) remove_eog_artifacts_regression(x, eog_channel, polynomial_order, threshold_multiplier, window_size), offline.rest, 'UniformOutput', false);
 offline.runs.eeg = cellfun(@(x) cellfun(@(y) remove_eog_artifacts_regression(y, eog_channel, polynomial_order, threshold_multiplier, window_size), x, 'UniformOutput', false), offline.runs.eeg, 'UniformOutput', false);
 online.session2.eeg = cellfun(@(x) cellfun(@(y) remove_eog_artifacts_regression(y, eog_channel, polynomial_order, threshold_multiplier, window_size), x, 'UniformOutput', false), online.session2.eeg, 'UniformOutput', false);
 online.session3.rest = cellfun(@(x) remove_eog_artifacts_regression(x, eog_channel, polynomial_order, threshold_multiplier, window_size), online.session3.rest, 'UniformOutput', false);
 online.session3.eeg = cellfun(@(x) cellfun(@(y) remove_eog_artifacts_regression(y, eog_channel, polynomial_order, threshold_multiplier, window_size), x, 'UniformOutput', false), online.session3.eeg, 'UniformOutput', false);
+
+eog_channel = 59;  % Adjust the EOG channel index if necessary
+
+offline.rest = cellfun(@(x) remove_eog_artifacts_regression(x, eog_channel, polynomial_order, threshold_multiplier, window_size), offline.rest, 'UniformOutput', false);
+offline.runs.eeg = cellfun(@(x) cellfun(@(y) remove_eog_artifacts_regression(y, eog_channel, polynomial_order, threshold_multiplier, window_size), x, 'UniformOutput', false), offline.runs.eeg, 'UniformOutput', false);
+online.session2.eeg = cellfun(@(x) cellfun(@(y) remove_eog_artifacts_regression(y, eog_channel, polynomial_order, threshold_multiplier, window_size), x, 'UniformOutput', false), online.session2.eeg, 'UniformOutput', false);
+online.session3.rest = cellfun(@(x) remove_eog_artifacts_regression(x, eog_channel, polynomial_order, threshold_multiplier, window_size), online.session3.rest, 'UniformOutput', false);
+online.session3.eeg = cellfun(@(x) cellfun(@(y) remove_eog_artifacts_regression(y, eog_channel, polynomial_order, threshold_multiplier, window_size), x, 'UniformOutput', false), online.session3.eeg, 'UniformOutput', false);
+
+eog_channel = 60;  % Adjust the EOG channel index if necessary
+
+offline.rest = cellfun(@(x) remove_eog_artifacts_regression(x, eog_channel, polynomial_order, threshold_multiplier, window_size), offline.rest, 'UniformOutput', false);
+offline.runs.eeg = cellfun(@(x) cellfun(@(y) remove_eog_artifacts_regression(y, eog_channel, polynomial_order, threshold_multiplier, window_size), x, 'UniformOutput', false), offline.runs.eeg, 'UniformOutput', false);
+online.session2.eeg = cellfun(@(x) cellfun(@(y) remove_eog_artifacts_regression(y, eog_channel, polynomial_order, threshold_multiplier, window_size), x, 'UniformOutput', false), online.session2.eeg, 'UniformOutput', false);
+online.session3.rest = cellfun(@(x) remove_eog_artifacts_regression(x, eog_channel, polynomial_order, threshold_multiplier, window_size), online.session3.rest, 'UniformOutput', false);
+online.session3.eeg = cellfun(@(x) cellfun(@(y) remove_eog_artifacts_regression(y, eog_channel, polynomial_order, threshold_multiplier, window_size), x, 'UniformOutput', false), online.session3.eeg, 'UniformOutput', false);
+
+eog_channel = 61;  % Adjust the EOG channel index if necessary
+
+offline.rest = cellfun(@(x) remove_eog_artifacts_regression(x, eog_channel, polynomial_order, threshold_multiplier, window_size), offline.rest, 'UniformOutput', false);
+offline.runs.eeg = cellfun(@(x) cellfun(@(y) remove_eog_artifacts_regression(y, eog_channel, polynomial_order, threshold_multiplier, window_size), x, 'UniformOutput', false), offline.runs.eeg, 'UniformOutput', false);
+online.session2.eeg = cellfun(@(x) cellfun(@(y) remove_eog_artifacts_regression(y, eog_channel, polynomial_order, threshold_multiplier, window_size), x, 'UniformOutput', false), online.session2.eeg, 'UniformOutput', false);
+online.session3.rest = cellfun(@(x) remove_eog_artifacts_regression(x, eog_channel, polynomial_order, threshold_multiplier, window_size), online.session3.rest, 'UniformOutput', false);
+online.session3.eeg = cellfun(@(x) cellfun(@(y) remove_eog_artifacts_regression(y, eog_channel, polynomial_order, threshold_multiplier, window_size), x, 'UniformOutput', false), online.session3.eeg, 'UniformOutput', false);
+
 
 
 % Calculate number of samples for N seconds
@@ -587,10 +701,10 @@ end
 
 
 % Plot the EOG data
-figure;
-plot(time_vector, eog_data_to_plot);
-hold on;
-grid on;
+%figure;
+%plot(time_vector, eog_data_to_plot);
+%hold on;
+%grid on;
 
 % Select the data for plotting (rest)
 if size(offline.rest{1}, 1) >= samples_to_plot
@@ -600,48 +714,14 @@ else
 end
 
 % Plot the channel data
-plot(time_vector, data_to_plot);
+plot(time_vector, data_to_plot, 'b', 'LineWidth', 1);
 xlabel('Time (seconds)');
 ylabel('Amplitude (\muV)');  % Adjust the units based on your data
-title(sprintf('EOG Channel AFTER FILTER', eog_channel));
-legend('EOG', 'Channel');
+title(sprintf('Effect of EOG regression on Most Discriminable Channel %s (Subj %d)', selected_channel_labels{1}, current_subject));
+legend('Before Regression', 'After Regression');
 hold off;
 
 disp(sprintf("EOG regressed"));
-
-%% Plot eeg channel
-
-channel_to_plot = 1;  % Adjust as necessary
-
-% Calculate number of samples for N seconds
-samples_to_plot = 10 * fs; 
-
-%{
-% Select the data for plotting
-if size(offline.runs.eeg{1}{1}, 1) >= samples_to_plot
-    data_to_plot = offline.runs.eeg{1}{1}(1:samples_to_plot, channel_to_plot);
-else
-    error('Not enough samples to plot. Check data dimensions and sampling rate.');
-end
-%}
-
-% Select the data for plotting (rest)
-if size(offline.rest{1}, 1) >= samples_to_plot
-    data_to_plot = offline.rest{1}(1:samples_to_plot, channel_to_plot);
-else
-    error('Not enough samples to plot. Check data dimensions and sampling rate. 403');
-end
-
-% Create the time vector for plotting
-time_vector = (0:samples_to_plot - 1) / fs;
-
-% Plot the data
-figure;
-plot(time_vector, data_to_plot);
-xlabel('Time (seconds)');
-ylabel('Amplitude (\muV)');  % Adjust the units based on your data
-title(sprintf('EEG Channel %d Over 15 Seconds', channel_to_plot));
-grid on;
 
 
 %% Calculate Mean/Median of Rest Data
@@ -659,25 +739,23 @@ s3_rest_mean = mean(online.session3.rest{1}, 1);
 figure;
 for i = 1:1
     %subplot(4, 3, i);
-    channel_idx = selected_channels(i);
+    channel_idx = selected_channels_adjusted(i);
     % Get the data for the selected channel
     channel_data = offline.runs.eeg{1}{1}(:, channel_idx);
     
     % Remove rest artifacts using regression
     clean_channel_data = remove_rest_artifacts_regression(channel_data, offline.rest{1});
     
-    plot(channel_data, 'b', 'LineWidth', 1.5);
+    plot(channel_data, 'b', 'LineWidth', 1, 'Color', [0 0 1 0.3]);
     hold on;
-    plot(clean_channel_data, 'r', 'LineWidth', 1.5);
+    plot(clean_channel_data, 'r', 'LineWidth', 1, 'Color', [1 0 0 0.3]);
     xlabel('Sample');
-    if mod(i, 3) == 1
-        ylabel('Amplitude');
-    end
-    title(sprintf('Channel %d', channel_idx));
+    ylabel('Amplitude');
+    title(sprintf('Effects of Rest Regression on Most Discriminable Channel %s (Subj %d)', selected_channel_labels{1}, current_subject));
     grid on;
 end
 legend('Before Rest Regression', 'After Rest Regression');
-annotation('textbox', [0.35, 0.95, 0.3, 0.05], 'String', 'Rest Regression', 'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', 'HorizontalAlignment', 'center');
+%title('Effects of Rest Regression on Most Discriminable Channel')
 
 % Perform regression for sessions 1 and 2
 offline.runs.eeg = cellfun(@(x) cellfun(@(y) remove_rest_artifacts_regression(y, offline.rest{1}), x, 'UniformOutput', false), offline.runs.eeg, 'UniformOutput', false);
@@ -687,6 +765,7 @@ online.session3.eeg = cellfun(@(x) cellfun(@(y) remove_rest_artifacts_regression
 
 disp(sprintf("Rest data regressed"));
 
+%{
 %% Plot eeg channel
 
 channel_to_plot = 1;  % Adjust as necessary
@@ -720,16 +799,16 @@ xlabel('Time (seconds)');
 ylabel('Amplitude (\muV)');  % Adjust the units based on your data
 title(sprintf('EEG Channel %d Over 15 Seconds', channel_to_plot));
 grid on;
-
+%}
 
 %% make subject struct subject -> offline/online -> rest/active -> labels/eeg
 
 % Isolate the selected channels found with the Fisher score
-offline.rest = cellfun(@(x) x(:, selected_channels), offline.rest, 'UniformOutput', false);
-offline.runs.eeg = cellfun(@(x) cellfun(@(y) y(:, selected_channels), x, 'UniformOutput', false), offline.runs.eeg, 'UniformOutput', false);
-online.session2.eeg = cellfun(@(x) cellfun(@(y) y(:, selected_channels), x, 'UniformOutput', false), online.session2.eeg, 'UniformOutput', false);
-online.session3.rest = cellfun(@(x) x(:, selected_channels), online.session3.rest, 'UniformOutput', false);
-online.session3.eeg = cellfun(@(x) cellfun(@(y) y(:, selected_channels), x, 'UniformOutput', false), online.session3.eeg, 'UniformOutput', false);
+offline.rest = cellfun(@(x) x(:, selected_channels_adjusted), offline.rest, 'UniformOutput', false);
+offline.runs.eeg = cellfun(@(x) cellfun(@(y) y(:, selected_channels_adjusted), x, 'UniformOutput', false), offline.runs.eeg, 'UniformOutput', false);
+online.session2.eeg = cellfun(@(x) cellfun(@(y) y(:, selected_channels_adjusted), x, 'UniformOutput', false), online.session2.eeg, 'UniformOutput', false);
+online.session3.rest = cellfun(@(x) x(:, selected_channels_adjusted), online.session3.rest, 'UniformOutput', false);
+online.session3.eeg = cellfun(@(x) cellfun(@(y) y(:, selected_channels_adjusted), x, 'UniformOutput', false), online.session3.eeg, 'UniformOutput', false);
 
 
 % Subject1 = struct('offline', offline, 'online', online);
