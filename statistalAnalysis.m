@@ -7,7 +7,7 @@ for i=1:4
     idx = 1;
     for j=1:20
         len = length(online_labels{i, 1}{j, 1});
-        sampleFeatures = online_feats{i, 1}(idx : idx + len - 1, :);
+        sampleFeatures = online_feats{i, 1}{j, 1}; %(idx : idx + len - 1, :);
         % sampleFeatures
         [labels, scores] = predict(final_model, sampleFeatures); % scores: rest, reach
         disp(scores)
@@ -40,36 +40,59 @@ for i=1:4
     end
 end
 
+% display random 4 from each session to get threshold
+% trials = randi([1, 20], 1, 6);
+figure;
+titles=["Rest", "Reach"];
+for i=1:20
+    subplot(4, 5, i);
+    X = 1:length(Pt{1, i});
+    scatter(X, Pt{1, i}, 12, 'filled');  % 100 is marker size, 'filled' fills markers
+    % hold on
+    % plot([1, length(Pt{1, 1})], [reach_thresh, reach_thresh], 'g--'); % 'r--' specifies red dashed line
+    % hold on
+    % plot([1, length(Pt{1, 1})], [rest_thresh, rest_thresh], 'o--'); % 'r--' specifies red dashed line
+    % 
+    xlabel('Sample Point');
+    ylabel('Probability');
+    title(strcat('Run 1 Trial ', num2str(i), titles(online_labels{1, 1}{i, 1}(1))))
+    legend({'Rest', 'Reach'}, 'Location', 'best');
+    % titles(online_labels{1, 1}{i, 1})
+end
 % horizontal pars at thresholds = .55, .35 rest
 % decision if sustained or not
 % see if the plots are underneath the lines
 %do it by run, and trial
 % 0-160 time steps???
 % how do you do it per sample
-reach_thresh = 0.5;
-rest_thresh = 0.5;
-X = 1:length(Pt{1});
+reach_thresh = 0.55;
+rest_thresh = 0.75;
+trials = randi([1, 20], 1, 4);
+
 figure;
-% plot(Pt{1}, 'r.')
-scatter(X, Pt{1}, 20, 'filled');  % 100 is marker size, 'filled' fills markers
-hold on
-plot([1, length(Pt{1, 1})], [reach_thresh, reach_thresh], 'g--'); % 'r--' specifies red dashed line
-hold on
-plot([1, length(Pt{1, 1})], [rest_thresh, rest_thresh], 'o--'); % 'r--' specifies red dashed line
+for i=1:4
+    subplot(2, 2, i);
+    X = 1:length(Pt{1, trials(i)});
+    % plot(Pt{1}, 'r.')
+    scatter(X, Pt{1, trials(i)}, 12, 'filled');  % 100 is marker size, 'filled' fills markers
+    hold on
+    plot([1, length(Pt{1, trials(i)})], [reach_thresh, reach_thresh], 'g--'); % 'r--' specifies red dashed line
+    hold on
+    plot([1, length(Pt{1, trials(i)})], [rest_thresh, rest_thresh], 'o--'); % 'r--' specifies red dashed line
+    
+    xlabel('Sample Point');
+    ylabel('Probability');
+    title(strcat('Evidence Accumulation: Run 1 Trial ', num2str(trials(i))))
+    legend({'Rest', 'Reach'}, 'Location', 'best');
+end
 
-xlabel('X');
-ylabel('Y');
-title('Evidence Accumulation: Run 1')
-legend({'Rest', 'Reach'}, 'Location', 'best');
-
-% display random 4 from each session to get threshold
-trials = randi([1, 10], 1, 4);
 
 % for each session, go through each with the threshold and get an accuracy
 % - trial based
 % session 2
 trial_results = zeros(4, 20, 2);
 correct=zeros(4, 4); % rest, reach
+thresholded_correct = zeros(4, 1);
 for run=1:4
     for trial=1:20
         if length(Pt{run, trial}) == 0
@@ -80,7 +103,7 @@ for run=1:4
         trial_results(run, trial, 1) = reach; % if 1, it doesn't pass
         trial_results(run, trial, 2) = rest;           
         
-        % ma
+        % final timestep
         if session2.labels.type{1, run}(trial) == 1 && rest
             correct(run, 1) = correct(run, 1) + 1;
         end
@@ -99,8 +122,18 @@ for run=1:4
             correct(run, 4) = correct(run, 4) + 1;
         end
 
+        % at any point
+        if session2.labels.type{1, run}(trial) == 1 && ...
+                any(Pt{run, trial}(:, 1) >= rest_thresh)
+            thresholded_correct(run) = thresholded_correct(run) + 1;
+        end
+        if session2.labels.type{1, run}(trial) == 2 && ...
+                any(Pt{run, trial}(:, 2) >= reach_thresh)
+            thresholded_correct(run, 4) = thresholded_correct(run, 4) + 1;
+        end
+
     end
-    disp(correct/10);
+    % disp(correct/10);
 end
 
 % sample based accuracy per trial - for each data point, see if it meets the
@@ -122,4 +155,6 @@ for run=1:4
     end
 end
 %% ttest
-%% randomness
+for i=1:4
+    [h, p,ci,stats] = ttest(finalCVAccuracy(1:4, 1), finalCVAccuracy(1:4, 2));
+end

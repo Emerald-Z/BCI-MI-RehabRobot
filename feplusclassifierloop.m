@@ -1,5 +1,5 @@
 %% Feature Extraction
-runs = Subject1.offline.runs;
+runs = Subject3.offline.runs;
 offline_feats = cell(3,1);
 
 fs = 512;
@@ -10,11 +10,12 @@ best_window_size = 0;
 best_overlap = 0;
 
 % Define the window sizes and overlaps to test
-window_sizes = [0.5, 1, 1.5];
-window_sizes = [0.1, 0.3, 0.5, 0.7, 0.9, 1.1, 1.3, 1.5, 1.7, 1.9];
-window_sizes = [2.2, 2.3, 2.4];
-overlaps = [0.5, 0.75, 0.9];
-overlaps = [0.5, 0.53, 0.55, 0.58, 0.6, 0.63, 0.65, 0.68, 0.7];
+% window_sizes = [0.5, 1, 1.5];
+window_sizes = [0.2, 0.3, 0.5, 0.7, 0.9, 1.1, 1.5, 2.0];
+% window_sizes = [2.2, 2.3, 2.4];
+% window_sizes = [0.1, 0.15, 0.2, 0.25, 0.3];
+% overlaps = [0.5, 0.75, 0.9];
+overlaps = [0.2, 0.25, 0.3, 0.5, 0.6];
 
 for window_size = window_sizes
     for overlap = overlaps
@@ -26,9 +27,9 @@ for window_size = window_sizes
             for j=1:20
                 filteredSignal = runs.eeg{i}{j};
                 label = runs.labels{i}(j);
-                [MAV, VAR, RMS, WL, ZC, SSC, AR, labels] = extract_features(window_size, overlap, fs, filteredSignal, label);
+                [VAR, WL, ZC, EN, FRAC, labels] = extract_avg_features(window_size, overlap, fs, filteredSignal, label);
                 % Combine features into a matrix
-                temp = [MAV; VAR; RMS; WL; ZC; SSC; AR]';
+                temp = [VAR; WL; ZC; EN; FRAC]';
                 min_temp_offline_size = min(min_temp_offline_size, size(temp, 1));
                 featureMatrix = [featureMatrix; temp];
             end
@@ -36,19 +37,19 @@ for window_size = window_sizes
         end
         
         % Online features
-        for i=1:4
-            featureMatrix = [];
-            for j=1:20
-                filteredSignal = session2.eeg{i}{j};
-                label = session2.labels.type{i}(j);
-                [MAV, VAR, RMS, WL, ZC, SSC, AR, labels] = extract_features(window_size, overlap, fs, filteredSignal, label);
-                % Combine features into a matrix
-                temp = [MAV; VAR; RMS; WL; ZC; SSC; AR]';
-                min_temp_online_size = min(min_temp_online_size, size(temp, 1));
-                featureMatrix = [featureMatrix; temp];
-            end
-            online_feats{i} = featureMatrix;
-        end
+        % for i=1:4
+        %     featureMatrix = [];
+        %     for j=1:20
+        %         filteredSignal = session2.eeg{i}{j};
+        %         label = session2.labels.type{i}(j);
+        %         [MAV, VAR, RMS, WL, ZC, SSC, AR, labels] = extract_features(window_size, overlap, fs, filteredSignal, label);
+        %         % Combine features into a matrix
+        %         temp = [MAV; VAR; RMS; WL; ZC; SSC; AR]';
+        %         min_temp_online_size = min(min_temp_online_size, size(temp, 1));
+        %         featureMatrix = [featureMatrix; temp];
+        %     end
+        %     online_feats{i} = featureMatrix;
+        % end
         
         % Shorten featureMatrix to the smallest temp value found (issues
         % with length of data)
@@ -57,12 +58,12 @@ for window_size = window_sizes
             offline_feats{i} = offline_feats{i}(1:min_temp_offline_size*20, :);
             %size(offline_feats{i})
         end
-        for i=1:4
-            online_feats{i} = online_feats{i}(1:min_temp_online_size*20, :);
-        end
+        % for i=1:4
+        %     online_feats{i} = online_feats{i}(1:min_temp_online_size*20, :);
+        % end
 
         %% Classification
-        numFeatures = 7;
+        numFeatures = 5;
 
         % Build classifier using offline data and test with run-wise cross-validation
         k = 3; % num runs
@@ -74,7 +75,7 @@ for window_size = window_sizes
         for i=1:3
             for j=1:20
                 %FEATUREL(i, (j-1)* dataLen + 1 : j* dataLen) = offline.labels{i, 1}(j,1) * ones(dataLen, 1);
-                FEATUREL(i, (j-1)* min_temp_offline_size + 1 : j* min_temp_offline_size) = offline.labels{i, 1}(j,1) * ones(min_temp_offline_size, 1);
+                FEATUREL(i, (j-1)* min_temp_offline_size + 1 : j* min_temp_offline_size) = offline.runs.labels{i, 1}(j,1) * ones(min_temp_offline_size, 1);
             end
         end
 
@@ -199,9 +200,9 @@ for window_size = window_sizes
         final_model = fitcecoc(trainFeatures, trainLabels, 'Learners', t, 'Coding', 'onevsone');
 
         % Assess on session 2, 3
-        finalCVaccuracy = zeros(2, 1);
-        online = Subject1.online.session2;
-        online_k = 4;
+        % finalCVaccuracy = zeros(2, 1);
+        % online = Subject1.online.session2;
+        % online_k = 4;
 
 
         %{
