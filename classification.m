@@ -23,6 +23,10 @@ for i=1:3
     DATA(i, :,:) = vertcat(offline_feats{i,1}{:});
 end
 
+for i=1:size(DATA,1)
+    DATA(i, :, :) = zscore(squeeze(DATA(i, :, :)));
+end
+
 CC_avg=zeros(2,2,1,k); 
 CM=zeros(2,2);
 MAV_ALL_acc=zeros(1, k);

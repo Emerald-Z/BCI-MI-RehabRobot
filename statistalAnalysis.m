@@ -18,7 +18,7 @@ end
 
 
 %% evidence accumulation
-alpha = 0.7;
+alpha = .4;
 Pt = cell(4, 20, 1);
 for i=1:4
     for j=1:20
@@ -31,6 +31,7 @@ for i=1:4
         for t = 1:shape(1)
             if t == 1
                 temp(t, :) = sample_probabilities{i, j}(t, :); % For the first sample, use the original probability distribution
+                %temp(t, :) = [0.5, 0.5]; % Initialize first sample to 50% probability for both classes
             else
                 temp(t, :) = alpha * temp(t-1, :) + (1 - alpha) * sample_probabilities{i, j}(t, :); % Apply exponential smoothing
             end
@@ -129,7 +130,8 @@ for run=1:4
         end
         if session2.labels.type{1, run}(trial) == 2 && ...
                 any(Pt{run, trial}(:, 2) >= reach_thresh)
-            thresholded_correct(run, 4) = thresholded_correct(run, 4) + 1;
+            %thresholded_correct(run, 4) = thresholded_correct(run, 4) + 1;
+            thresholded_correct(run) = thresholded_correct(run) + 1;
         end
 
     end
