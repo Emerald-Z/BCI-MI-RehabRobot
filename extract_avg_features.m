@@ -99,7 +99,5 @@ function [avg_MAV_feature, avg_VAR_feature, ...
     
 
     avg_MAV_feature = avg_MAV_feature / 10;
-
-    disp("DONE")
     
 end

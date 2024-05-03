@@ -95,6 +95,7 @@ disp("offline done")
 %disp(avg_coeffs)
 %disp(size(offline_feats))
 %% 
+
 online_feats = cell(4,1);
 online_labels = cell(4,1);
 

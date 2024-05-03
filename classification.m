@@ -293,7 +293,7 @@ for i=1:online_k
     % Compute accuracy for current fold
     finalCVAccuracy(i, 1) = sum(predictedLabels == validationLabels) / length(validationLabels);
     disp(finalCVAccuracy(i, 1))
-    subplot(2, online_k/2, i);
+    subplot(2, 4, i);
     confusionMatrix = confusionmat(validationLabels-1, predictedLabels-1);
     cc=confusionchart(confusionMatrix, {'Rest','Reach'});
     cc.RowSummary = 'row-normalized';
@@ -336,7 +336,7 @@ for i=1:online_k
     % Compute accuracy for current fold
     finalCVAccuracy(i, 2) = sum(predictedLabels == validationLabels) / length(validationLabels);
     disp(finalCVAccuracy(i, 2))
-    subplot(2, online_k/2, i);
+    subplot(2, 4, i);
     confusionMatrix = confusionmat(validationLabels-1, predictedLabels-1);
     cc=confusionchart(confusionMatrix, {'Rest','Reach'});
     cc.RowSummary = 'row-normalized';
